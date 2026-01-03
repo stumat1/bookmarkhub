@@ -36,10 +36,7 @@ export interface UpdateBookmarkData {
 }
 
 export class DatabaseError extends Error {
-  constructor(
-    message: string,
-    public readonly cause?: unknown
-  ) {
+  constructor(message: string, public readonly cause?: unknown) {
     super(message);
     this.name = "DatabaseError";
   }
@@ -82,12 +79,12 @@ export async function insertBookmarks(
   }
 
   try {
-    const inserted: Bookmark[] = [];
-
     // Use transaction for bulk insert
-    await db.transaction(async (tx) => {
+    const inserted = db.transaction((tx) => {
+      const results: Bookmark[] = [];
+
       for (const bookmark of bookmarkData) {
-        const result = await tx
+        const result = tx
           .insert(bookmarks)
           .values({
             ...bookmark,
@@ -97,15 +94,19 @@ export async function insertBookmarks(
           .returning();
 
         if (result[0]) {
-          inserted.push(result[0]);
+          results.push(result[0]);
         }
       }
+
+      return results;
     });
 
     return inserted;
   } catch (error) {
     throw new DatabaseError(
-      `Failed to insert bookmarks: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to insert bookmarks: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -168,7 +169,9 @@ export async function findDuplicates(url: string): Promise<Bookmark[]> {
       );
   } catch (error) {
     throw new DatabaseError(
-      `Failed to find duplicates: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to find duplicates: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -231,7 +234,9 @@ export async function getAllBookmarks(
     return await query.orderBy(desc(bookmarks.createdAt));
   } catch (error) {
     throw new DatabaseError(
-      `Failed to get bookmarks: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to get bookmarks: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -254,7 +259,9 @@ export async function getBookmarkById(id: number): Promise<Bookmark | null> {
     return result[0] ?? null;
   } catch (error) {
     throw new DatabaseError(
-      `Failed to get bookmark: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to get bookmark: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -305,7 +312,8 @@ export async function updateBookmark(
 
     if (data.url !== undefined) updateData.url = data.url.trim();
     if (data.title !== undefined) updateData.title = data.title.trim();
-    if (data.description !== undefined) updateData.description = data.description;
+    if (data.description !== undefined)
+      updateData.description = data.description;
     if (data.favicon !== undefined) updateData.favicon = data.favicon;
     if (data.folder !== undefined) updateData.folder = data.folder;
     if (data.browser !== undefined) updateData.browser = data.browser;
@@ -326,7 +334,9 @@ export async function updateBookmark(
       throw error;
     }
     throw new DatabaseError(
-      `Failed to update bookmark: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to update bookmark: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -365,7 +375,9 @@ export async function deleteBookmark(id: number): Promise<boolean> {
     return result.length > 0;
   } catch (error) {
     throw new DatabaseError(
-      `Failed to delete bookmark: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to delete bookmark: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -401,7 +413,9 @@ export async function deleteBookmarks(ids: number[]): Promise<number> {
     return deletedCount;
   } catch (error) {
     throw new DatabaseError(
-      `Failed to delete bookmarks: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to delete bookmarks: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -426,9 +440,7 @@ export async function deleteBookmarks(ids: number[]): Promise<number> {
 export async function getStats(): Promise<BookmarkStats> {
   try {
     // Get total count
-    const totalResult = await db
-      .select({ count: count() })
-      .from(bookmarks);
+    const totalResult = await db.select({ count: count() }).from(bookmarks);
     const totalBookmarks = totalResult[0]?.count ?? 0;
 
     // Get counts by browser
@@ -480,7 +492,9 @@ export async function getStats(): Promise<BookmarkStats> {
     };
   } catch (error) {
     throw new DatabaseError(
-      `Failed to get stats: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to get stats: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -501,7 +515,9 @@ export async function getDistinctBrowsers(): Promise<string[]> {
     return result.map((r) => r.browser).filter((b): b is string => b !== null);
   } catch (error) {
     throw new DatabaseError(
-      `Failed to get browsers: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to get browsers: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }
@@ -522,7 +538,9 @@ export async function getDistinctFolders(): Promise<string[]> {
     return result.map((r) => r.folder).filter((f): f is string => f !== null);
   } catch (error) {
     throw new DatabaseError(
-      `Failed to get folders: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to get folders: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
       error
     );
   }

@@ -31,3 +31,12 @@ This is a Next.js 16 project using the App Router with the following stack:
 - Schema defined in `db/schema.ts`
 - Database connection in `db/index.ts`
 - Uses SQLite file `sqlite.db` in project root
+
+### API Routes
+
+- `GET /api/bookmarks` - List bookmarks with pagination
+- `POST /api/bookmarks` - Create a bookmark
+- `PUT /api/bookmarks/[id]` - Update a bookmark
+- `DELETE /api/bookmarks/[id]` - Delete a bookmark
+- `GET /api/export` - Redirects to `/export` page
+- `POST /api/export` - Export bookmarks to Netscape HTML format (accepts `{ ids: number[] | "all" }`)

@@ -143,6 +143,12 @@ function generateBookmarkHtml(bookmarkList: BookmarkRow[]): string {
   return html;
 }
 
+// GET /api/export - Redirect to export page
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const url = new URL("/export", request.url);
+  return NextResponse.redirect(url);
+}
+
 // POST /api/export - Export bookmarks to HTML file
 export async function POST(request: NextRequest): Promise<NextResponse<Blob | ErrorResponse>> {
   try {
