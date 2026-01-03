@@ -91,10 +91,11 @@ export async function insertBookmarks(
             url: bookmark.url.trim(),
             title: bookmark.title.trim(),
           })
-          .returning();
+          .returning()
+          .get();
 
-        if (result[0]) {
-          results.push(result[0]);
+        if (result) {
+          results.push(result);
         }
       }
 
