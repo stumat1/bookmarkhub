@@ -42,3 +42,9 @@ next-env.d.ts
 
 # database
 sqlite.db
+sqlite.db-shm
+sqlite.db-wal
+
+# Windows reserved device names
+nul
+NUL
