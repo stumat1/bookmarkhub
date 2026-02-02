@@ -9,6 +9,7 @@ export const bookmarks = sqliteTable(
     description: text("description"),
     favicon: text("favicon"),
     folder: text("folder"),
+    tags: text("tags"),
     browser: text("browser"),
     dateAdded: integer("date_added", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })

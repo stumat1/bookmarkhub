@@ -28,6 +28,7 @@ interface BookmarkData {
   description: string | null;
   favicon: string | null;
   folder: string | null;
+  tags: string | null;
   browser: string | null;
   dateAdded: Date | null;
   createdAt: Date;
@@ -44,10 +45,18 @@ interface PaginatedResponse {
   };
 }
 
+interface RecentImport {
+  id: number;
+  title: string;
+  url: string;
+  browser: string | null;
+  createdAt: string;
+}
+
 interface StatsResponse {
   totalBookmarks: number;
   bookmarksByBrowser: { browser: string | null; count: number }[];
-  recentImports: unknown[];
+  recentImports: RecentImport[];
 }
 
 // Browser icon component
@@ -105,6 +114,7 @@ function Favicon({ url, favicon }: { url: string; favicon: string | null }) {
   }
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- Favicons from arbitrary domains need onError fallback
     <img
       src={faviconUrl}
       alt=""

@@ -28,7 +28,9 @@ interface ErrorResponse {
 }
 
 // GET /api/stats - Return bookmark statistics
-export async function GET(): Promise<NextResponse<StatsResponse | ErrorResponse>> {
+export async function GET(): Promise<
+  NextResponse<StatsResponse | ErrorResponse>
+> {
   try {
     // Get total bookmark count
     const totalResult = await db

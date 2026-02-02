@@ -40,3 +40,13 @@ This is a Next.js 16 project using the App Router with the following stack:
 - `DELETE /api/bookmarks/[id]` - Delete a bookmark
 - `GET /api/export` - Redirects to `/export` page
 - `POST /api/export` - Export bookmarks to Netscape HTML format (accepts `{ ids: number[] | "all" }`)
+
+### Components
+
+Located in `src/components/`:
+
+- **EditBookmarkModal** - Modal for editing bookmarks with fields for title, URL, folder, tags, and notes. Includes form validation, loading states, and success/error notifications. Props: `bookmark`, `isOpen`, `onClose`, `onSave`
+- **BookmarkUploader** - Drag-and-drop file uploader for importing bookmark HTML files
+- **FolderTree** - Displays bookmark folder hierarchy
+- **Nav** - Navigation component
+- **ThemeToggle** - Dark/light mode toggle

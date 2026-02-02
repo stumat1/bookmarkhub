@@ -11,6 +11,7 @@ export interface Bookmark {
   description: string | null;
   favicon: string | null;
   folder: string | null;
+  tags: string | null;
   browser: string | null;
   dateAdded: Date | null;
   createdAt: Date;
@@ -44,6 +45,26 @@ function isValidUrl(url: string): boolean {
   }
 }
 
+// Validate API response matches Bookmark structure
+function isValidBookmarkResponse(data: unknown): data is Bookmark {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  return (
+    typeof obj.id === "number" &&
+    typeof obj.url === "string" &&
+    typeof obj.title === "string" &&
+    (obj.description === null || typeof obj.description === "string") &&
+    (obj.favicon === null || typeof obj.favicon === "string") &&
+    (obj.folder === null || typeof obj.folder === "string") &&
+    (obj.tags === null || typeof obj.tags === "string") &&
+    (obj.browser === null || typeof obj.browser === "string")
+  );
+}
+
 export default function EditBookmarkModal({
   bookmark,
   isOpen,
@@ -54,6 +75,7 @@ export default function EditBookmarkModal({
   const [title, setTitle] = useState(bookmark.title);
   const [url, setUrl] = useState(bookmark.url);
   const [folder, setFolder] = useState(bookmark.folder || "");
+  const [tags, setTags] = useState(bookmark.tags || "");
   const [description, setDescription] = useState(bookmark.description || "");
 
   // UI state
@@ -70,6 +92,7 @@ export default function EditBookmarkModal({
     setTitle(bookmark.title);
     setUrl(bookmark.url);
     setFolder(bookmark.folder || "");
+    setTags(bookmark.tags || "");
     setDescription(bookmark.description || "");
     setErrors({});
     setNotification(null);
@@ -148,6 +171,7 @@ export default function EditBookmarkModal({
           title: title.trim(),
           url: url.trim(),
           folder: folder.trim() || null,
+          tags: tags.trim() || null,
           description: description.trim() || null,
         }),
       });
@@ -158,12 +182,17 @@ export default function EditBookmarkModal({
         throw new Error(data.error || "Failed to update bookmark");
       }
 
+      // Validate response structure before passing to callback
+      if (!isValidBookmarkResponse(data)) {
+        throw new Error("Invalid response from server");
+      }
+
       setNotification({
         type: "success",
         message: "Bookmark updated successfully",
       });
 
-      // Call onSave callback with updated bookmark
+      // Call onSave callback with validated bookmark
       onSave(data);
 
       // Close modal after brief delay to show success
@@ -176,7 +205,7 @@ export default function EditBookmarkModal({
     } finally {
       setIsLoading(false);
     }
-  }, [bookmark.id, title, url, folder, description, validateForm, onSave, onClose]);
+  }, [bookmark.id, title, url, folder, tags, description, validateForm, onSave, onClose]);
 
   // Handle form submit
   const handleSubmit = useCallback(
@@ -317,6 +346,28 @@ export default function EditBookmarkModal({
               className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="e.g., Work/Projects"
             />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label
+              htmlFor="edit-tags"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            >
+              Tags
+            </label>
+            <input
+              id="edit-tags"
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              placeholder="e.g., react, tutorial, javascript"
+            />
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Separate tags with commas
+            </p>
           </div>
 
           {/* Notes (Description) */}

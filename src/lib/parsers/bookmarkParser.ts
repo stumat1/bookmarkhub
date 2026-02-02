@@ -102,15 +102,6 @@ function detectBrowserType(html: string): BrowserType {
 // HTML Parsing Utilities
 // ============================================================================
 
-interface TagMatch {
-  tag: string;
-  attributes: Record<string, string>;
-  content: string;
-  fullMatch: string;
-  startIndex: number;
-  endIndex: number;
-}
-
 function parseAttributes(attrString: string): Record<string, string> {
   const attributes: Record<string, string> = {};
   // Match attribute="value" or attribute='value' or attribute=value

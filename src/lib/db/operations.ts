@@ -2,7 +2,7 @@
  * Database operations for bookmark management using Drizzle ORM
  */
 
-import { eq, like, and, or, sql, count, desc } from "drizzle-orm";
+import { eq, like, and, or, sql, count, desc, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 
@@ -61,9 +61,7 @@ export class DatabaseError extends Error {
  * ]);
  * ```
  */
-export async function insertBookmarks(
-  bookmarkData: NewBookmark[]
-): Promise<Bookmark[]> {
+export function insertBookmarks(bookmarkData: NewBookmark[]): Bookmark[] {
   if (!bookmarkData.length) {
     return [];
   }
@@ -79,9 +77,10 @@ export async function insertBookmarks(
   }
 
   try {
-    // Use transaction for bulk insert
-    const inserted = db.transaction((tx) => {
-      const results: Bookmark[] = [];
+    // Use transaction for bulk insert (better-sqlite3 transactions are synchronous)
+    // The callback receives tx and should use it for operations within the transaction
+    const results = db.transaction((tx) => {
+      const inserted: Bookmark[] = [];
 
       for (const bookmark of bookmarkData) {
         const result = tx
@@ -95,14 +94,14 @@ export async function insertBookmarks(
           .get();
 
         if (result) {
-          results.push(result);
+          inserted.push(result);
         }
       }
 
-      return results;
+      return inserted;
     });
 
-    return inserted;
+    return results;
   } catch (error) {
     throw new DatabaseError(
       `Failed to insert bookmarks: ${
@@ -120,8 +119,8 @@ export async function insertBookmarks(
  * @returns The inserted bookmark
  * @throws DatabaseError if insertion fails
  */
-export async function insertBookmark(bookmark: NewBookmark): Promise<Bookmark> {
-  const result = await insertBookmarks([bookmark]);
+export function insertBookmark(bookmark: NewBookmark): Bookmark {
+  const result = insertBookmarks([bookmark]);
   if (!result[0]) {
     throw new DatabaseError("Failed to insert bookmark");
   }
@@ -390,25 +389,30 @@ export async function deleteBookmark(id: number): Promise<boolean> {
  * @param ids - Array of bookmark IDs to delete
  * @returns Number of bookmarks deleted
  */
-export async function deleteBookmarks(ids: number[]): Promise<number> {
+export function deleteBookmarks(ids: number[]): number {
   if (!ids.length) {
     return 0;
   }
 
   try {
-    let deletedCount = 0;
+    // Use transaction for bulk delete (better-sqlite3 transactions are synchronous)
+    // The callback receives tx and should use it for operations within the transaction
+    const deletedCount = db.transaction((tx) => {
+      let count = 0;
 
-    await db.transaction(async (tx) => {
       for (const id of ids) {
-        const result = await tx
+        const result = tx
           .delete(bookmarks)
           .where(eq(bookmarks.id, id))
-          .returning({ id: bookmarks.id });
+          .returning({ id: bookmarks.id })
+          .all();
 
         if (result.length > 0) {
-          deletedCount++;
+          count++;
         }
       }
+
+      return count;
     });
 
     return deletedCount;
@@ -481,7 +485,7 @@ export async function getStats(): Promise<BookmarkStats> {
     const recentResult = await db
       .select({ count: count() })
       .from(bookmarks)
-      .where(sql`${bookmarks.createdAt} >= ${sevenDaysAgo.getTime() / 1000}`);
+      .where(gte(bookmarks.createdAt, sevenDaysAgo));
 
     const recentlyAdded = recentResult[0]?.count ?? 0;
 

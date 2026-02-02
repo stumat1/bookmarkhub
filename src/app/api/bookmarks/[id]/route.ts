@@ -10,6 +10,7 @@ interface BookmarkUpdateRequest {
   description?: string | null;
   favicon?: string | null;
   folder?: string | null;
+  tags?: string | null;
   browser?: string | null;
   dateAdded?: string | null;
 }
@@ -21,6 +22,7 @@ interface BookmarkResponse {
   description: string | null;
   favicon: string | null;
   folder: string | null;
+  tags: string | null;
   browser: string | null;
   dateAdded: Date | null;
   createdAt: Date;
@@ -66,7 +68,7 @@ function validateBookmarkUpdate(
   const body = data as Record<string, unknown>;
 
   // Check if at least one field is being updated
-  const updateableFields = ["url", "title", "description", "favicon", "folder", "browser", "dateAdded"];
+  const updateableFields = ["url", "title", "description", "favicon", "folder", "tags", "browser", "dateAdded"];
   const hasUpdates = updateableFields.some((field) => field in body);
   if (!hasUpdates) {
     return { valid: false, errors: ["At least one field must be provided for update"] };
@@ -100,6 +102,10 @@ function validateBookmarkUpdate(
     errors.push("folder must be a string or null");
   }
 
+  if (body.tags !== undefined && body.tags !== null && typeof body.tags !== "string") {
+    errors.push("tags must be a string or null");
+  }
+
   if (body.browser !== undefined && body.browser !== null && typeof body.browser !== "string") {
     errors.push("browser must be a string or null");
   }
@@ -124,6 +130,7 @@ function validateBookmarkUpdate(
       description: body.description as string | null | undefined,
       favicon: body.favicon as string | null | undefined,
       folder: body.folder as string | null | undefined,
+      tags: body.tags as string | null | undefined,
       browser: body.browser as string | null | undefined,
       dateAdded: body.dateAdded as string | null | undefined,
     },
@@ -231,6 +238,9 @@ export async function PUT(
     }
     if (data.folder !== undefined) {
       updateData.folder = data.folder;
+    }
+    if (data.tags !== undefined) {
+      updateData.tags = data.tags;
     }
     if (data.browser !== undefined) {
       updateData.browser = data.browser;

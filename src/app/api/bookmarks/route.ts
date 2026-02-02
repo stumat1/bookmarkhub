@@ -21,6 +21,7 @@ interface BookmarkResponse {
   description: string | null;
   favicon: string | null;
   folder: string | null;
+  tags: string | null;
   browser: string | null;
   dateAdded: Date | null;
   createdAt: Date;

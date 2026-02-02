@@ -38,6 +38,37 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
+// Validate API response matches ImportResponse structure
+function isValidImportResponse(data: unknown): data is ImportResponse {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  if (typeof obj.success !== "boolean" || typeof obj.message !== "string") {
+    return false;
+  }
+
+  if (typeof obj.imported !== "number" || !Array.isArray(obj.duplicates)) {
+    return false;
+  }
+
+  // Validate duplicates array structure
+  for (const dup of obj.duplicates) {
+    if (
+      !dup ||
+      typeof dup !== "object" ||
+      typeof (dup as Record<string, unknown>).url !== "string" ||
+      typeof (dup as Record<string, unknown>).title !== "string"
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export default function BookmarkUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
@@ -124,7 +155,12 @@ export default function BookmarkUploader() {
         body: formData,
       });
 
-      const data: ImportResponse = await res.json();
+      const data = await res.json();
+
+      // Validate response structure
+      if (!isValidImportResponse(data)) {
+        throw new Error("Invalid response from server");
+      }
 
       if (data.success) {
         setResponse(data);

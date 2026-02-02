@@ -183,7 +183,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ImportRes
       const newBookmarks = unique.map((b) =>
         toNewBookmark(b, parseResult.browserType)
       );
-      const inserted = await insertBookmarks(newBookmarks);
+      const inserted = insertBookmarks(newBookmarks);
       importedCount = inserted.length;
     }
 
