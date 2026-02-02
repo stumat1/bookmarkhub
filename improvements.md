@@ -44,7 +44,7 @@ Help users maintain bookmark hygiene by detecting broken links.
 - [ ] Bulk action to archive or delete dead links
 - [ ] Optional scheduled background checks
 
-### 3. Bulk Operations
+### 3. Bulk Operations DONE
 
 **Priority:** High | **Effort:** Medium
 
@@ -57,7 +57,7 @@ Enable efficient management of multiple bookmarks at once.
 - [ ] Bulk add/remove tags
 - [ ] Bulk export selected items
 
-### 4. Sorting Options
+### 4. Sorting Options DONE
 
 **Priority:** High | **Effort:** Low
 
@@ -69,7 +69,7 @@ Currently bookmarks have no user-controlled sort order.
 - [ ] Sort by last modified
 - [ ] Persist sort preference in local storage
 
-### 5. Favorites / Pinning
+### 5. Favorites / Pinning DONE
 
 **Priority:** Medium | **Effort:** Low
 

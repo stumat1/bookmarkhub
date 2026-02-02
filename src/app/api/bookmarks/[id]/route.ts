@@ -13,6 +13,7 @@ interface BookmarkUpdateRequest {
   tags?: string | null;
   browser?: string | null;
   dateAdded?: string | null;
+  isFavorite?: boolean;
 }
 
 interface BookmarkResponse {
@@ -27,6 +28,7 @@ interface BookmarkResponse {
   dateAdded: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  isFavorite: boolean;
 }
 
 interface ErrorResponse {
@@ -68,7 +70,7 @@ function validateBookmarkUpdate(
   const body = data as Record<string, unknown>;
 
   // Check if at least one field is being updated
-  const updateableFields = ["url", "title", "description", "favicon", "folder", "tags", "browser", "dateAdded"];
+  const updateableFields = ["url", "title", "description", "favicon", "folder", "tags", "browser", "dateAdded", "isFavorite"];
   const hasUpdates = updateableFields.some((field) => field in body);
   if (!hasUpdates) {
     return { valid: false, errors: ["At least one field must be provided for update"] };
@@ -118,6 +120,10 @@ function validateBookmarkUpdate(
     }
   }
 
+  if (body.isFavorite !== undefined && typeof body.isFavorite !== "boolean") {
+    errors.push("isFavorite must be a boolean");
+  }
+
   if (errors.length > 0) {
     return { valid: false, errors };
   }
@@ -133,6 +139,7 @@ function validateBookmarkUpdate(
       tags: body.tags as string | null | undefined,
       browser: body.browser as string | null | undefined,
       dateAdded: body.dateAdded as string | null | undefined,
+      isFavorite: body.isFavorite as boolean | undefined,
     },
   };
 }
@@ -247,6 +254,9 @@ export async function PUT(
     }
     if (data.dateAdded !== undefined) {
       updateData.dateAdded = data.dateAdded ? new Date(data.dateAdded) : null;
+    }
+    if (data.isFavorite !== undefined) {
+      updateData.isFavorite = data.isFavorite;
     }
 
     const result = await db

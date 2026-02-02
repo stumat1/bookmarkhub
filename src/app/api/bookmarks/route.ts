@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
-import { eq, like, and, or, sql, desc } from "drizzle-orm";
+import { eq, like, and, or, sql, desc, asc } from "drizzle-orm";
 
 // Request/Response Types
 interface BookmarkCreateRequest {
@@ -28,6 +28,7 @@ interface BookmarkResponse {
   updatedAt: Date;
   linkStatus: string | null;
   lastChecked: Date | null;
+  isFavorite: boolean;
 }
 
 interface PaginatedResponse {
@@ -136,6 +137,19 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
     const folder = searchParams.get("folder")?.trim();
     const tag = searchParams.get("tag")?.trim();
     const linkStatus = searchParams.get("linkStatus")?.trim();
+    const favorite = searchParams.get("favorite")?.trim();
+
+    // Sort params
+    const sortField = searchParams.get("sort")?.trim() || "createdAt";
+    const sortOrder = searchParams.get("order")?.trim() || "desc";
+
+    // Validate sort field
+    const validSortFields = ["createdAt", "title", "url", "dateAdded", "updatedAt"] as const;
+    type SortField = typeof validSortFields[number];
+    const safeSortField: SortField = validSortFields.includes(sortField as SortField)
+      ? (sortField as SortField)
+      : "createdAt";
+    const safeSortOrder = sortOrder === "asc" ? "asc" : "desc";
 
     // Build where conditions
     const conditions = [];
@@ -187,6 +201,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
       }
     }
 
+    if (favorite === "true") {
+      conditions.push(eq(bookmarks.isFavorite, true));
+    }
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
@@ -196,12 +214,16 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
       .where(whereClause);
     const total = countResult[0]?.count ?? 0;
 
+    // Build order by clause
+    const orderFn = safeSortOrder === "asc" ? asc : desc;
+    const orderByColumn = bookmarks[safeSortField];
+
     // Get paginated results
     const results = await db
       .select()
       .from(bookmarks)
       .where(whereClause)
-      .orderBy(desc(bookmarks.createdAt))
+      .orderBy(orderFn(orderByColumn))
       .limit(limit)
       .offset(offset);
 

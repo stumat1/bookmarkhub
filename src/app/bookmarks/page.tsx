@@ -32,6 +32,8 @@ import {
   Download,
   FolderInput,
   Tags,
+  ArrowUpDown,
+  Star,
 } from "lucide-react";
 
 // Types
@@ -51,6 +53,7 @@ interface BookmarkData {
   updatedAt: Date;
   linkStatus: LinkStatus | null;
   lastChecked: Date | null;
+  isFavorite: boolean;
 }
 
 interface PaginatedResponse {
@@ -674,6 +677,21 @@ export default function BookmarksPage() {
   const [folderFilter, setFolderFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [linkStatusFilter, setLinkStatusFilter] = useState("");
+  const [favoriteFilter, setFavoriteFilter] = useState(false);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("bookmarks-sort-by") || "createdAt";
+    }
+    return "createdAt";
+  });
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("bookmarks-sort-order") as "asc" | "desc") || "desc";
+    }
+    return "desc";
+  });
 
   // Filter options
   const [browsers, setBrowsers] = useState<string[]>([]);
@@ -772,12 +790,23 @@ export default function BookmarksPage() {
       if (folderFilter) params.set("folder", folderFilter);
       if (tagFilter) params.set("tag", tagFilter);
       if (linkStatusFilter) params.set("linkStatus", linkStatusFilter);
+      if (favoriteFilter) params.set("favorite", "true");
+      params.set("sort", sortBy);
+      params.set("order", sortOrder);
 
       const res = await fetch(`/api/bookmarks?${params}`);
       if (!res.ok) throw new Error("Failed to fetch bookmarks");
 
       const data: PaginatedResponse = await res.json();
-      setBookmarks(data.data);
+      // Sort favorites to the top of each page (unless already filtering by favorites)
+      const sortedData = favoriteFilter
+        ? data.data
+        : [...data.data].sort((a, b) => {
+            if (a.isFavorite && !b.isFavorite) return -1;
+            if (!a.isFavorite && b.isFavorite) return 1;
+            return 0;
+          });
+      setBookmarks(sortedData);
       setTotalPages(data.pagination.totalPages);
       setTotal(data.pagination.total);
     } catch (err) {
@@ -785,7 +814,7 @@ export default function BookmarksPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter]);
+  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter, favoriteFilter, sortBy, sortOrder]);
 
   // Check links for current page or all bookmarks
   const checkLinks = async (ids: number[] | "all") => {
@@ -959,10 +988,30 @@ export default function BookmarksPage() {
     }
   };
 
+  // Toggle favorite status
+  const toggleFavorite = async (bookmark: BookmarkData) => {
+    try {
+      const res = await fetch(`/api/bookmarks/${bookmark.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFavorite: !bookmark.isFavorite }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update favorite");
+
+      const updated = await res.json();
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+    }
+  };
+
   // Clear selection when page changes
   useEffect(() => {
     clearSelection();
-  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter]);
+  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter, favoriteFilter]);
 
   useEffect(() => {
     fetchBookmarks();
@@ -988,10 +1037,11 @@ export default function BookmarksPage() {
     setFolderFilter("");
     setTagFilter("");
     setLinkStatusFilter("");
+    setFavoriteFilter(false);
     setPage(1);
   };
 
-  const hasFilters = search || browserFilter || folderFilter || tagFilter || linkStatusFilter;
+  const hasFilters = search || browserFilter || folderFilter || tagFilter || linkStatusFilter || favoriteFilter;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -1220,6 +1270,48 @@ export default function BookmarksPage() {
               <option value="unchecked">Unchecked</option>
             </select>
 
+            {/* Favorites Filter */}
+            <button
+              onClick={() => {
+                setFavoriteFilter(!favoriteFilter);
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                favoriteFilter
+                  ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              }`}
+            >
+              <Star className={`h-4 w-4 ${favoriteFilter ? "fill-amber-500" : ""}`} />
+              Favorites
+            </button>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2 ml-auto">
+              <ArrowUpDown className="h-4 w-4 text-zinc-400" />
+              <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [field, order] = e.target.value.split("-") as [string, "asc" | "desc"];
+                  setSortBy(field);
+                  setSortOrder(order);
+                  localStorage.setItem("bookmarks-sort-by", field);
+                  localStorage.setItem("bookmarks-sort-order", order);
+                  setPage(1);
+                }}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="createdAt-desc">Date Added (Newest)</option>
+                <option value="createdAt-asc">Date Added (Oldest)</option>
+                <option value="title-asc">Title (A-Z)</option>
+                <option value="title-desc">Title (Z-A)</option>
+                <option value="url-asc">URL (A-Z)</option>
+                <option value="url-desc">URL (Z-A)</option>
+                <option value="updatedAt-desc">Last Modified (Newest)</option>
+                <option value="updatedAt-asc">Last Modified (Oldest)</option>
+              </select>
+            </div>
+
             {/* Clear Filters */}
             {hasFilters && (
               <button
@@ -1418,6 +1510,17 @@ export default function BookmarksPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => toggleFavorite(bookmark)}
+                      className={`rounded-lg p-2 transition-colors ${
+                        bookmark.isFavorite
+                          ? "text-amber-500 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/30"
+                          : "text-zinc-400 hover:bg-zinc-100 hover:text-amber-500 dark:hover:bg-zinc-800"
+                      }`}
+                      title={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star className={`h-4 w-4 ${bookmark.isFavorite ? "fill-amber-500" : ""}`} />
+                    </button>
                     <button
                       onClick={() => setEditingBookmark(bookmark)}
                       className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"

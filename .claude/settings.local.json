@@ -5,7 +5,8 @@
       "Bash(tree:*)",
       "Bash(mkdir:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

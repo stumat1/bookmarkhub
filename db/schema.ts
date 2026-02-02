@@ -21,11 +21,14 @@ export const bookmarks = sqliteTable(
     // Link checker fields
     linkStatus: text("link_status").$type<"valid" | "broken" | "timeout" | "redirect" | "unchecked">().default("unchecked"),
     lastChecked: integer("last_checked", { mode: "timestamp" }),
+    // Favorites
+    isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [
     index("idx_bookmarks_url").on(table.url),
     index("idx_bookmarks_browser").on(table.browser),
     index("idx_bookmarks_folder").on(table.folder),
     index("idx_bookmarks_link_status").on(table.linkStatus),
+    index("idx_bookmarks_favorite").on(table.isFavorite),
   ]
 );

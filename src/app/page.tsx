@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Link2,
   AlertTriangle,
+  Star,
 } from "lucide-react";
 import BookmarkUploader from "@/src/components/BookmarkUploader";
 
@@ -93,9 +94,18 @@ interface LinkHealthResponse {
   healthPercentage: number;
 }
 
+interface FavoriteBookmark {
+  id: number;
+  title: string;
+  url: string;
+  favicon: string | null;
+  isFavorite: boolean;
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [linkHealth, setLinkHealth] = useState<LinkHealthResponse | null>(null);
+  const [favorites, setFavorites] = useState<FavoriteBookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,9 +113,10 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [statsRes, linkHealthRes] = await Promise.all([
+      const [statsRes, linkHealthRes, favoritesRes] = await Promise.all([
         fetch("/api/stats"),
         fetch("/api/link-check"),
+        fetch("/api/bookmarks?favorite=true&limit=5"),
       ]);
 
       if (!statsRes.ok) throw new Error("Failed to fetch stats");
@@ -115,6 +126,11 @@ export default function Dashboard() {
       if (linkHealthRes.ok) {
         const linkHealthData = await linkHealthRes.json();
         setLinkHealth(linkHealthData);
+      }
+
+      if (favoritesRes.ok) {
+        const favoritesData = await favoritesRes.json();
+        setFavorites(favoritesData.data || []);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load statistics");
@@ -339,6 +355,63 @@ export default function Dashboard() {
             </div>
           </section>
         </div>
+
+        {/* Quick Favorites */}
+        {favorites.length > 0 && (
+          <section className="mt-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Quick Favorites
+              </h2>
+              <Link
+                href="/bookmarks?favorite=true"
+                className="flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+              >
+                <Star className="h-4 w-4" />
+                View all
+              </Link>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {favorites.map((bookmark) => (
+                <a
+                  key={bookmark.id}
+                  href={bookmark.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 transition-all hover:border-amber-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-amber-700"
+                >
+                  <div className="flex-shrink-0">
+                    {bookmark.favicon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={bookmark.favicon}
+                        alt=""
+                        className="h-8 w-8 rounded bg-zinc-100 object-contain p-1 dark:bg-zinc-800"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                          target.nextElementSibling?.classList.remove("hidden");
+                        }}
+                      />
+                    ) : null}
+                    <div className={`flex h-8 w-8 items-center justify-center rounded bg-amber-100 dark:bg-amber-900/30 ${bookmark.favicon ? "hidden" : ""}`}>
+                      <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-zinc-900 group-hover:text-amber-600 dark:text-zinc-100 dark:group-hover:text-amber-400">
+                      {bookmark.title || "Untitled"}
+                    </p>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {new URL(bookmark.url).hostname}
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Recent Activity */}
         <section className="mt-8">
