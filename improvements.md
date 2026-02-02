@@ -81,40 +81,40 @@ Quick access to important bookmarks.
 - [ ] Pinned bookmarks section at top of list
 - [ ] Quick access favorites on dashboard
 
-### 6. Quick Add Bookmarklet
+### 6. Quick Add Bookmarklet DONE
 
 **Priority:** Medium | **Effort:** Low
 
 Allow users to add bookmarks from any webpage without leaving it.
 
-- [ ] Generate a draggable bookmarklet link
-- [ ] Bookmarklet auto-captures current page URL and title
-- [ ] Opens BookmarkHub in popup or new tab with pre-filled form
-- [ ] Instructions page for installation
+- [x] Generate a draggable bookmarklet link
+- [x] Bookmarklet auto-captures current page URL and title
+- [x] Opens BookmarkHub in popup or new tab with pre-filled form
+- [x] Instructions page for installation
 
-### 7. Enhanced Search
+### 7. Enhanced Search DONE
 
 **Priority:** Medium | **Effort:** Low
 
 Improve search capabilities beyond current implementation.
 
-- [ ] Include notes/description in search results
-- [ ] Highlight search matches in results
-- [ ] Search history / recent searches
-- [ ] Advanced search syntax (e.g., `folder:Work tag:important`)
-- [ ] Search within specific fields only
+- [x] Include notes/description in search results
+- [x] Highlight search matches in results
+- [x] Search history / recent searches
+- [x] Advanced search syntax (e.g., `folder:Work tag:important`)
+- [x] Search within specific fields only
 
-### 8. Bookmark Preview
+### 8. Bookmark Preview DONE
 
 **Priority:** Low | **Effort:** High
 
 Visual previews of bookmarked pages.
 
-- [ ] Show page thumbnail on hover
-- [ ] Screenshot capture service integration
-- [ ] Preview modal with page snapshot
-- [ ] Fallback to favicon + domain for failed captures
-- [ ] Option to refresh/update preview
+- [x] Show page thumbnail on hover
+- [x] Screenshot capture service integration
+- [x] Preview modal with page snapshot
+- [x] Fallback to favicon + domain for failed captures
+- [x] Option to refresh/update preview
 
 ### 9. Reading List / "Read Later"
 

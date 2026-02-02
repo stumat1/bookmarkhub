@@ -34,6 +34,12 @@ import {
   Tags,
   ArrowUpDown,
   Star,
+  History,
+  HelpCircle,
+  Image as ImageIcon,
+  RefreshCw,
+  Eye,
+  ImageOff,
 } from "lucide-react";
 
 // Types
@@ -54,6 +60,7 @@ interface BookmarkData {
   linkStatus: LinkStatus | null;
   lastChecked: Date | null;
   isFavorite: boolean;
+  thumbnailUrl: string | null;
 }
 
 interface PaginatedResponse {
@@ -583,6 +590,212 @@ function BulkMoveModal({
   );
 }
 
+// Search History Helper Functions
+const SEARCH_HISTORY_KEY = "bookmark-search-history";
+const MAX_SEARCH_HISTORY = 10;
+
+function getSearchHistory(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const history = localStorage.getItem(SEARCH_HISTORY_KEY);
+    return history ? JSON.parse(history) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addToSearchHistory(query: string): void {
+  if (typeof window === "undefined" || !query.trim()) return;
+  try {
+    const history = getSearchHistory();
+    // Remove if already exists (will be re-added at top)
+    const filtered = history.filter((h) => h !== query);
+    // Add to beginning
+    const updated = [query, ...filtered].slice(0, MAX_SEARCH_HISTORY);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function clearSearchHistory(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(SEARCH_HISTORY_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// Text Highlighting Component
+function HighlightedText({
+  text,
+  searchTerms,
+  className = "",
+}: {
+  text: string;
+  searchTerms: string[];
+  className?: string;
+}) {
+  if (!text || searchTerms.length === 0) {
+    return <span className={className}>{text}</span>;
+  }
+
+  // Create a regex pattern from search terms, escaping special characters
+  const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = searchTerms
+    .filter((term) => term.length > 0)
+    .map(escapeRegex)
+    .join("|");
+
+  if (!pattern) {
+    return <span className={className}>{text}</span>;
+  }
+
+  const regex = new RegExp(`(${pattern})`, "gi");
+  const parts = text.split(regex);
+
+  return (
+    <span className={className}>
+      {parts.map((part, index) =>
+        regex.test(part) ? (
+          <mark
+            key={index}
+            className="bg-yellow-200 text-yellow-900 dark:bg-yellow-800 dark:text-yellow-100 rounded px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={index}>{part}</span>
+        )
+      )}
+    </span>
+  );
+}
+
+// Extract search terms for highlighting (excludes field prefixes)
+function extractSearchTerms(searchQuery: string): string[] {
+  if (!searchQuery) return [];
+
+  const terms: string[] = [];
+  // Remove field:value patterns and collect values and remaining terms
+  const fieldPattern = /(\w+):(?:"([^"]+)"|(\S+))/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = fieldPattern.exec(searchQuery)) !== null) {
+    // Add text before this match
+    const textBefore = searchQuery.slice(lastIndex, match.index).trim();
+    if (textBefore) {
+      terms.push(...textBefore.split(/\s+/).filter(Boolean));
+    }
+    lastIndex = match.index + match[0].length;
+
+    // Add the value from field:value (useful for highlighting)
+    const value = match[2] || match[3];
+    if (value) {
+      terms.push(value);
+    }
+  }
+
+  // Add remaining text
+  const textAfter = searchQuery.slice(lastIndex).trim();
+  if (textAfter) {
+    terms.push(...textAfter.split(/\s+/).filter(Boolean));
+  }
+
+  return terms;
+}
+
+// Search Help Modal
+function SearchHelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Search Syntax Help
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Use special prefixes to search within specific fields:
+          </p>
+
+          <div className="space-y-3">
+            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+              <code className="font-mono text-blue-600 dark:text-blue-400">title:react</code>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                Search only in bookmark titles
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+              <code className="font-mono text-blue-600 dark:text-blue-400">url:github</code>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                Search only in URLs
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+              <code className="font-mono text-blue-600 dark:text-blue-400">folder:Work</code>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                Filter by folder name
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+              <code className="font-mono text-blue-600 dark:text-blue-400">tag:important</code>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                Filter by tag
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+              <code className="font-mono text-blue-600 dark:text-blue-400">notes:todo</code>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                Search only in notes/description
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
+            <p className="font-medium text-blue-900 dark:text-blue-100">Examples:</p>
+            <ul className="mt-2 space-y-1.5 text-blue-700 dark:text-blue-300">
+              <li><code className="font-mono">folder:Work tag:urgent react</code></li>
+              <li><code className="font-mono">title:&quot;API Documentation&quot;</code></li>
+              <li><code className="font-mono">url:docs.github</code></li>
+            </ul>
+          </div>
+
+          <p className="text-zinc-500 dark:text-zinc-400">
+            Use quotes for multi-word values: <code className="font-mono">folder:&quot;My Projects&quot;</code>
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <button
+            onClick={onClose}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Bulk Tag Modal
 function BulkTagModal({
   count,
@@ -659,6 +872,212 @@ function BulkTagModal({
   );
 }
 
+// Thumbnail Preview Component (shows on hover)
+function ThumbnailPreview({
+  bookmark,
+  onOpenModal,
+}: {
+  bookmark: BookmarkData;
+  onOpenModal: () => void;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  // Generate fallback favicon URL
+  const getFallbackUrl = () => {
+    try {
+      const domain = new URL(bookmark.url).hostname;
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    } catch {
+      return null;
+    }
+  };
+
+  const thumbnailUrl = bookmark.thumbnailUrl;
+  const fallbackUrl = getFallbackUrl();
+
+  if (!thumbnailUrl && !fallbackUrl) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+        <ImageOff className="h-8 w-8 text-zinc-400" />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={onOpenModal}
+      className="group relative h-full w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800"
+    >
+      {imageLoading && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+        </div>
+      )}
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageError || !thumbnailUrl ? fallbackUrl || "" : thumbnailUrl}
+        alt={`Preview of ${bookmark.title}`}
+        className={`h-full w-full object-cover transition-transform group-hover:scale-105 ${
+          imageLoading ? "opacity-0" : "opacity-100"
+        } ${imageError || !thumbnailUrl ? "object-contain p-4" : ""}`}
+        onLoad={() => setImageLoading(false)}
+        onError={() => {
+          setImageError(true);
+          setImageLoading(false);
+        }}
+      />
+
+      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
+        <Eye className="h-6 w-6 text-white" />
+      </div>
+    </button>
+  );
+}
+
+// Preview Modal Component
+function PreviewModal({
+  bookmark,
+  onClose,
+  onRefresh,
+  refreshing,
+}: {
+  bookmark: BookmarkData;
+  onClose: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  // Generate fallback favicon URL
+  const getFallbackUrl = () => {
+    try {
+      const domain = new URL(bookmark.url).hostname;
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    } catch {
+      return null;
+    }
+  };
+
+  const thumbnailUrl = bookmark.thumbnailUrl;
+  const fallbackUrl = getFallbackUrl();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-4xl rounded-xl bg-white shadow-xl dark:bg-zinc-900">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              {bookmark.title}
+            </h3>
+            <a
+              href={bookmark.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-sm text-blue-600 hover:underline dark:text-blue-400"
+            >
+              <span className="truncate">{bookmark.url}</span>
+              <ExternalLink className="h-3 w-3 flex-shrink-0" />
+            </a>
+          </div>
+          <div className="ml-4 flex items-center gap-2">
+            <button
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              title="Refresh preview"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Preview Image */}
+        <div className="relative aspect-video bg-zinc-100 dark:bg-zinc-800">
+          {imageLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-10 w-10 animate-spin text-zinc-400" />
+            </div>
+          )}
+
+          {!thumbnailUrl && !imageLoading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-8">
+              {fallbackUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={fallbackUrl}
+                    alt=""
+                    className="h-24 w-24 rounded-lg bg-white p-2 dark:bg-zinc-700"
+                  />
+                  <p className="text-center text-zinc-500 dark:text-zinc-400">
+                    No preview available
+                  </p>
+                  <button
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                    Generate Preview
+                  </button>
+                </>
+              ) : (
+                <>
+                  <ImageOff className="h-16 w-16 text-zinc-400" />
+                  <p className="text-center text-zinc-500 dark:text-zinc-400">
+                    No preview available
+                  </p>
+                </>
+              )}
+            </div>
+          ) : thumbnailUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={imageError ? fallbackUrl || "" : thumbnailUrl}
+              alt={`Preview of ${bookmark.title}`}
+              className={`h-full w-full ${
+                imageError ? "object-contain p-8" : "object-contain"
+              } ${imageLoading ? "opacity-0" : "opacity-100"}`}
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+              }}
+            />
+          ) : null}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between border-t border-zinc-200 p-4 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            {bookmark.thumbnailUrl ? "Preview generated via Microlink" : "Click refresh to generate preview"}
+          </p>
+          <a
+            href={bookmark.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Visit Site
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState<BookmarkData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -723,6 +1142,23 @@ export default function BookmarksPage() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showBulkMoveModal, setShowBulkMoveModal] = useState(false);
   const [showBulkTagModal, setShowBulkTagModal] = useState(false);
+
+  // Search history and help
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const [showSearchHelp, setShowSearchHelp] = useState(false);
+
+  // Preview modal
+  const [previewBookmark, setPreviewBookmark] = useState<BookmarkData | null>(null);
+  const [refreshingPreview, setRefreshingPreview] = useState(false);
+
+  // Load search history on mount
+  useEffect(() => {
+    setSearchHistory(getSearchHistory());
+  }, []);
+
+  // Get search terms for highlighting
+  const searchTerms = extractSearchTerms(search);
 
   // Fetch filter options
   useEffect(() => {
@@ -1008,6 +1444,39 @@ export default function BookmarksPage() {
     }
   };
 
+  // Refresh preview for a bookmark
+  const refreshPreview = async (bookmark: BookmarkData) => {
+    setRefreshingPreview(true);
+    try {
+      const res = await fetch("/api/thumbnails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [bookmark.id] }),
+      });
+
+      if (!res.ok) throw new Error("Failed to generate preview");
+
+      const data = await res.json();
+      if (data.results && data.results[0]) {
+        const updatedThumbnailUrl = data.results[0].thumbnailUrl;
+        // Update the bookmark in the list
+        setBookmarks((prev) =>
+          prev.map((b) =>
+            b.id === bookmark.id ? { ...b, thumbnailUrl: updatedThumbnailUrl } : b
+          )
+        );
+        // Update the preview modal bookmark if open
+        if (previewBookmark?.id === bookmark.id) {
+          setPreviewBookmark({ ...bookmark, thumbnailUrl: updatedThumbnailUrl });
+        }
+      }
+    } catch (err) {
+      console.error("Error refreshing preview:", err);
+    } finally {
+      setRefreshingPreview(false);
+    }
+  };
+
   // Clear selection when page changes
   useEffect(() => {
     clearSelection();
@@ -1025,8 +1494,28 @@ export default function BookmarksPage() {
   // Handle search submit
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearch(searchInput);
+    const query = searchInput.trim();
+    setSearch(query);
     setPage(1);
+    setShowSearchHistory(false);
+    if (query) {
+      addToSearchHistory(query);
+      setSearchHistory(getSearchHistory());
+    }
+  };
+
+  // Apply search from history
+  const applyHistorySearch = (query: string) => {
+    setSearchInput(query);
+    setSearch(query);
+    setPage(1);
+    setShowSearchHistory(false);
+  };
+
+  // Clear all search history
+  const handleClearHistory = () => {
+    clearSearchHistory();
+    setSearchHistory([]);
   };
 
   // Clear filters
@@ -1183,10 +1672,68 @@ export default function BookmarksPage() {
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search by title or URL..."
-                className="w-full rounded-lg border border-zinc-300 py-2.5 pl-10 pr-4 text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                onFocus={() => searchHistory.length > 0 && setShowSearchHistory(true)}
+                onBlur={() => setTimeout(() => setShowSearchHistory(false), 200)}
+                placeholder="Search bookmarks... (try folder:Work or tag:important)"
+                className="w-full rounded-lg border border-zinc-300 py-2.5 pl-10 pr-10 text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput("");
+                    if (search) {
+                      setSearch("");
+                      setPage(1);
+                    }
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+
+              {/* Search History Dropdown */}
+              {showSearchHistory && searchHistory.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-20 rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                      <History className="h-3 w-3" />
+                      Recent Searches
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleClearHistory}
+                      className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <ul className="max-h-48 overflow-y-auto py-1">
+                    {searchHistory.map((query, index) => (
+                      <li key={index}>
+                        <button
+                          type="button"
+                          onClick={() => applyHistorySearch(query)}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          <History className="h-3.5 w-3.5 text-zinc-400" />
+                          <span className="truncate">{query}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={() => setShowSearchHelp(true)}
+              className="rounded-lg border border-zinc-300 px-3 py-2.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              title="Search syntax help"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button>
             <button
               type="submit"
               className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700"
@@ -1369,6 +1916,35 @@ export default function BookmarksPage() {
               Export
             </button>
             <button
+              onClick={async () => {
+                setBulkActionLoading(true);
+                try {
+                  const res = await fetch("/api/thumbnails", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ids: Array.from(selectedIds) }),
+                  });
+                  if (res.ok) {
+                    await fetchBookmarks();
+                  }
+                } catch (err) {
+                  console.error("Error generating previews:", err);
+                } finally {
+                  setBulkActionLoading(false);
+                  clearSelection();
+                }
+              }}
+              disabled={bulkActionLoading}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {bulkActionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+              Previews
+            </button>
+            <button
               onClick={clearSelection}
               className="ml-auto flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             >
@@ -1465,19 +2041,31 @@ export default function BookmarksPage() {
                       rel="noopener noreferrer"
                       className="group flex items-center gap-2"
                     >
-                      <span className="truncate font-medium text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">
-                        {bookmark.title || "Untitled"}
-                      </span>
+                      <HighlightedText
+                        text={bookmark.title || "Untitled"}
+                        searchTerms={searchTerms}
+                        className="truncate font-medium text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400"
+                      />
                       <ExternalLink className="h-4 w-4 flex-shrink-0 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100" />
                     </a>
-                    <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
-                      {bookmark.url}
-                    </p>
+                    <HighlightedText
+                      text={bookmark.url}
+                      searchTerms={searchTerms}
+                      className="block truncate text-sm text-zinc-500 dark:text-zinc-400"
+                    />
+                    {/* Description/Notes - show when searching or if exists */}
+                    {bookmark.description && (
+                      <HighlightedText
+                        text={bookmark.description}
+                        searchTerms={searchTerms}
+                        className="mt-1 block text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2"
+                      />
+                    )}
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-zinc-400 dark:text-zinc-500">
                       {bookmark.folder && (
                         <span className="flex items-center gap-1">
                           <FolderOpen className="h-3 w-3" />
-                          {bookmark.folder}
+                          <HighlightedText text={bookmark.folder} searchTerms={searchTerms} />
                         </span>
                       )}
                       {bookmark.browser && (
@@ -1508,8 +2096,23 @@ export default function BookmarksPage() {
                     )}
                   </div>
 
+                  {/* Thumbnail Preview (on hover) */}
+                  <div className="hidden sm:block h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <ThumbnailPreview
+                      bookmark={bookmark}
+                      onOpenModal={() => setPreviewBookmark(bookmark)}
+                    />
+                  </div>
+
                   {/* Actions */}
                   <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPreviewBookmark(bookmark)}
+                      className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                      title="Preview"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => toggleFavorite(bookmark)}
                       className={`rounded-lg p-2 transition-colors ${
@@ -1662,6 +2265,21 @@ export default function BookmarksPage() {
           onClose={() => setShowBulkTagModal(false)}
           onAddTags={bulkAddTags}
           loading={bulkActionLoading}
+        />
+      )}
+
+      {/* Search Help Modal */}
+      {showSearchHelp && (
+        <SearchHelpModal onClose={() => setShowSearchHelp(false)} />
+      )}
+
+      {/* Preview Modal */}
+      {previewBookmark && (
+        <PreviewModal
+          bookmark={previewBookmark}
+          onClose={() => setPreviewBookmark(null)}
+          onRefresh={() => refreshPreview(previewBookmark)}
+          refreshing={refreshingPreview}
         />
       )}
     </div>

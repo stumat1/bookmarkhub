@@ -29,6 +29,7 @@ interface BookmarkResponse {
   linkStatus: string | null;
   lastChecked: Date | null;
   isFavorite: boolean;
+  thumbnailUrl: string | null;
 }
 
 interface PaginatedResponse {
@@ -121,6 +122,71 @@ function validateBookmarkInput(
   };
 }
 
+// Parse advanced search syntax
+// Supports: folder:value, tag:value, title:value, url:value, notes:value, description:value
+// Everything else is a general search across title, URL, and description
+interface ParsedSearch {
+  general: string[];
+  folder?: string;
+  tag?: string;
+  title?: string;
+  url?: string;
+  notes?: string;
+}
+
+function parseAdvancedSearch(searchQuery: string): ParsedSearch {
+  const result: ParsedSearch = { general: [] };
+
+  // Regular expression to match field:value patterns
+  // Handles quoted values like folder:"My Folder" and unquoted like folder:Work
+  const fieldPattern = /(\w+):(?:"([^"]+)"|(\S+))/g;
+
+  let lastIndex = 0;
+  let match;
+
+  while ((match = fieldPattern.exec(searchQuery)) !== null) {
+    // Add any text before this match as general search terms
+    const textBefore = searchQuery.slice(lastIndex, match.index).trim();
+    if (textBefore) {
+      result.general.push(...textBefore.split(/\s+/).filter(Boolean));
+    }
+    lastIndex = match.index + match[0].length;
+
+    const field = match[1].toLowerCase();
+    const value = match[2] || match[3]; // quoted or unquoted value
+
+    switch (field) {
+      case "folder":
+        result.folder = value;
+        break;
+      case "tag":
+        result.tag = value;
+        break;
+      case "title":
+        result.title = value;
+        break;
+      case "url":
+        result.url = value;
+        break;
+      case "notes":
+      case "description":
+        result.notes = value;
+        break;
+      default:
+        // Unknown field, treat as general search
+        result.general.push(match[0]);
+    }
+  }
+
+  // Add any remaining text after the last match
+  const textAfter = searchQuery.slice(lastIndex).trim();
+  if (textAfter) {
+    result.general.push(...textAfter.split(/\s+/).filter(Boolean));
+  }
+
+  return result;
+}
+
 // GET /api/bookmarks - Fetch bookmarks with search, filters, and pagination
 export async function GET(request: NextRequest): Promise<NextResponse<PaginatedResponse | ErrorResponse>> {
   try {
@@ -154,25 +220,67 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
     // Build where conditions
     const conditions = [];
 
+    // Parse advanced search syntax
     if (search) {
-      conditions.push(
-        or(
-          like(bookmarks.title, `%${search}%`),
-          like(bookmarks.url, `%${search}%`),
-          like(bookmarks.description, `%${search}%`)
-        )
-      );
+      const parsed = parseAdvancedSearch(search);
+
+      // Handle field-specific searches from advanced syntax
+      if (parsed.title) {
+        conditions.push(like(bookmarks.title, `%${parsed.title}%`));
+      }
+
+      if (parsed.url) {
+        conditions.push(like(bookmarks.url, `%${parsed.url}%`));
+      }
+
+      if (parsed.notes) {
+        conditions.push(like(bookmarks.description, `%${parsed.notes}%`));
+      }
+
+      // Handle folder from advanced syntax (overrides dropdown filter)
+      if (parsed.folder) {
+        conditions.push(like(bookmarks.folder, `%${parsed.folder}%`));
+      }
+
+      // Handle tag from advanced syntax (overrides dropdown filter)
+      if (parsed.tag) {
+        const tagValue = parsed.tag;
+        conditions.push(
+          or(
+            eq(bookmarks.tags, tagValue),
+            like(bookmarks.tags, `${tagValue},%`),
+            like(bookmarks.tags, `%,${tagValue}`),
+            like(bookmarks.tags, `%,${tagValue},%`),
+            like(bookmarks.tags, `%${tagValue}%`) // Also match partial tags
+          )
+        );
+      }
+
+      // Handle general search terms (search across title, URL, and description)
+      if (parsed.general.length > 0) {
+        const generalConditions = parsed.general.map((term) =>
+          or(
+            like(bookmarks.title, `%${term}%`),
+            like(bookmarks.url, `%${term}%`),
+            like(bookmarks.description, `%${term}%`)
+          )
+        );
+        // All general terms must match (AND logic)
+        conditions.push(...generalConditions);
+      }
     }
 
     if (browser) {
       conditions.push(eq(bookmarks.browser, browser));
     }
 
-    if (folder) {
+    // Only apply dropdown folder filter if not overridden by advanced search
+    if (folder && !search?.includes("folder:")) {
       conditions.push(eq(bookmarks.folder, folder));
     }
 
-    if (tag) {
+    // Only apply dropdown tag filter if not overridden by advanced search
+    if (tag && !search?.includes("tag:")) {
       // Match tag in comma-separated list (handles: "tag", "tag,other", "other,tag", "a,tag,b")
       conditions.push(
         or(

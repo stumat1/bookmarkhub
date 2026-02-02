@@ -11,6 +11,7 @@ import {
   Download,
   Menu,
   X,
+  Zap,
 } from "lucide-react";
 
 const navLinks = [
@@ -18,6 +19,7 @@ const navLinks = [
   { href: "/bookmarks", label: "Bookmarks", icon: List },
   { href: "/import", label: "Import", icon: Upload },
   { href: "/export", label: "Export", icon: Download },
+  { href: "/bookmarklet", label: "Quick Add", icon: Zap },
 ];
 
 export default function Nav() {

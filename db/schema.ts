@@ -23,6 +23,8 @@ export const bookmarks = sqliteTable(
     lastChecked: integer("last_checked", { mode: "timestamp" }),
     // Favorites
     isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
+    // Preview thumbnail
+    thumbnailUrl: text("thumbnail_url"),
   },
   (table) => [
     index("idx_bookmarks_url").on(table.url),
