@@ -18,9 +18,25 @@ import {
   X,
   Check,
   ArrowLeft,
+  Tag,
+  Link2,
+  LinkIcon,
+  Clock,
+  ArrowRight,
+  CircleHelp,
+  CheckCircle,
+  XCircle,
+  Square,
+  CheckSquare,
+  MinusSquare,
+  Download,
+  FolderInput,
+  Tags,
 } from "lucide-react";
 
 // Types
+type LinkStatus = "valid" | "broken" | "timeout" | "redirect" | "unchecked";
+
 interface BookmarkData {
   id: number;
   url: string;
@@ -33,6 +49,8 @@ interface BookmarkData {
   dateAdded: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  linkStatus: LinkStatus | null;
+  lastChecked: Date | null;
 }
 
 interface PaginatedResponse {
@@ -122,6 +140,56 @@ function Favicon({ url, favicon }: { url: string; favicon: string | null }) {
       onError={() => setError(true)}
     />
   );
+}
+
+// Link Status Badge component
+function LinkStatusBadge({ status }: { status: LinkStatus | null }) {
+  if (!status || status === "unchecked") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" title="Not checked">
+        <CircleHelp className="h-3 w-3" />
+        Unchecked
+      </span>
+    );
+  }
+
+  if (status === "valid") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400" title="Link is valid">
+        <CheckCircle className="h-3 w-3" />
+        Valid
+      </span>
+    );
+  }
+
+  if (status === "broken") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400" title="Link is broken">
+        <XCircle className="h-3 w-3" />
+        Broken
+      </span>
+    );
+  }
+
+  if (status === "timeout") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" title="Request timed out">
+        <Clock className="h-3 w-3" />
+        Timeout
+      </span>
+    );
+  }
+
+  if (status === "redirect") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="URL redirects">
+        <ArrowRight className="h-3 w-3" />
+        Redirect
+      </span>
+    );
+  }
+
+  return null;
 }
 
 // Edit Modal Component
@@ -343,6 +411,251 @@ function DeleteModal({
   );
 }
 
+// Bulk Delete Modal
+function BulkDeleteModal({
+  count,
+  onClose,
+  onDelete,
+  loading,
+}: {
+  count: number;
+  onClose: () => void;
+  onDelete: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/30">
+            <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            Delete {count} Bookmark{count !== 1 ? "s" : ""}
+          </h3>
+        </div>
+
+        <p className="mb-4 text-zinc-600 dark:text-zinc-400">
+          Are you sure you want to delete {count} selected bookmark{count !== 1 ? "s" : ""}? This action cannot be undone.
+        </p>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 rounded-lg border border-zinc-300 px-4 py-2 font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={loading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            Delete All
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bulk Move Modal
+function BulkMoveModal({
+  count,
+  folders,
+  onClose,
+  onMove,
+  loading,
+}: {
+  count: number;
+  folders: string[];
+  onClose: () => void;
+  onMove: (folder: string) => void;
+  loading: boolean;
+}) {
+  const [selectedFolder, setSelectedFolder] = useState("");
+  const [newFolder, setNewFolder] = useState("");
+  const [useNewFolder, setUseNewFolder] = useState(false);
+
+  const handleMove = () => {
+    const folder = useNewFolder ? newFolder.trim() : selectedFolder;
+    onMove(folder);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
+              <FolderInput className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Move {count} Bookmark{count !== 1 ? "s" : ""}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Select existing folder
+            </label>
+            <select
+              value={selectedFolder}
+              onChange={(e) => {
+                setSelectedFolder(e.target.value);
+                setUseNewFolder(false);
+              }}
+              disabled={useNewFolder}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="">No folder (root)</option>
+              {folders.map((folder) => (
+                <option key={folder} value={folder}>
+                  {folder}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+            <span className="text-xs text-zinc-500">or</span>
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Create new folder
+            </label>
+            <input
+              type="text"
+              value={newFolder}
+              onChange={(e) => {
+                setNewFolder(e.target.value);
+                setUseNewFolder(e.target.value.length > 0);
+              }}
+              placeholder="e.g., Work/Projects"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 rounded-lg border border-zinc-300 px-4 py-2 font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleMove}
+            disabled={loading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FolderInput className="h-4 w-4" />
+            )}
+            Move
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bulk Tag Modal
+function BulkTagModal({
+  count,
+  onClose,
+  onAddTags,
+  loading,
+}: {
+  count: number;
+  onClose: () => void;
+  onAddTags: (tags: string) => void;
+  loading: boolean;
+}) {
+  const [tags, setTags] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-purple-100 p-2 dark:bg-purple-900/30">
+              <Tags className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Add Tags to {count} Bookmark{count !== 1 ? "s" : ""}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Tags (comma-separated)
+          </label>
+          <input
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="e.g., important, work, reference"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            These tags will be added to existing tags on each bookmark
+          </p>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 rounded-lg border border-zinc-300 px-4 py-2 font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onAddTags(tags)}
+            disabled={loading || !tags.trim()}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Tags className="h-4 w-4" />
+            )}
+            Add Tags
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState<BookmarkData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -359,14 +672,39 @@ export default function BookmarksPage() {
   const [searchInput, setSearchInput] = useState("");
   const [browserFilter, setBrowserFilter] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [linkStatusFilter, setLinkStatusFilter] = useState("");
 
   // Filter options
   const [browsers, setBrowsers] = useState<string[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
+  const [tags, setTags] = useState<{ tag: string; count: number }[]>([]);
 
   // Modals
   const [editingBookmark, setEditingBookmark] = useState<BookmarkData | null>(null);
   const [deletingBookmark, setDeletingBookmark] = useState<BookmarkData | null>(null);
+
+  // Link checking
+  const [checkingLinks, setCheckingLinks] = useState(false);
+  const [checkProgress, setCheckProgress] = useState<{ checked: number; total: number } | null>(null);
+  const [linkHealth, setLinkHealth] = useState<{
+    total: number;
+    checked: number;
+    valid: number;
+    broken: number;
+    timeout: number;
+    redirect: number;
+    healthPercentage: number;
+  } | null>(null);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  // Bulk action modals
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showBulkMoveModal, setShowBulkMoveModal] = useState(false);
+  const [showBulkTagModal, setShowBulkTagModal] = useState(false);
 
   // Fetch filter options
   useEffect(() => {
@@ -382,15 +720,22 @@ export default function BookmarksPage() {
           setBrowsers(browserList);
         }
 
-        // Fetch all bookmarks to get unique folders
-        const foldersRes = await fetch("/api/bookmarks?limit=100");
+        // Fetch all unique folders from dedicated endpoint
+        const foldersRes = await fetch("/api/folders");
         if (foldersRes.ok) {
-          const data: PaginatedResponse = await foldersRes.json();
-          const folderSet = new Set<string>();
-          data.data.forEach((b) => {
-            if (b.folder) folderSet.add(b.folder);
-          });
-          setFolders(Array.from(folderSet).sort());
+          const data: { folders: { folder: string | null; count: number }[] } = await foldersRes.json();
+          const folderList = data.folders
+            .map((f) => f.folder)
+            .filter((f): f is string => f !== null)
+            .sort();
+          setFolders(folderList);
+        }
+
+        // Fetch all unique tags
+        const tagsRes = await fetch("/api/tags");
+        if (tagsRes.ok) {
+          const data: { tags: { tag: string; count: number }[] } = await tagsRes.json();
+          setTags(data.tags);
         }
       } catch (err) {
         console.error("Failed to fetch filter options:", err);
@@ -398,6 +743,19 @@ export default function BookmarksPage() {
     };
 
     fetchFilterOptions();
+  }, []);
+
+  // Fetch link health statistics
+  const fetchLinkHealth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/link-check");
+      if (res.ok) {
+        const data = await res.json();
+        setLinkHealth(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch link health:", err);
+    }
   }, []);
 
   // Fetch bookmarks
@@ -412,6 +770,8 @@ export default function BookmarksPage() {
       if (search) params.set("search", search);
       if (browserFilter) params.set("browser", browserFilter);
       if (folderFilter) params.set("folder", folderFilter);
+      if (tagFilter) params.set("tag", tagFilter);
+      if (linkStatusFilter) params.set("linkStatus", linkStatusFilter);
 
       const res = await fetch(`/api/bookmarks?${params}`);
       if (!res.ok) throw new Error("Failed to fetch bookmarks");
@@ -425,11 +785,193 @@ export default function BookmarksPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, browserFilter, folderFilter]);
+  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter]);
+
+  // Check links for current page or all bookmarks
+  const checkLinks = async (ids: number[] | "all") => {
+    setCheckingLinks(true);
+    setCheckProgress({ checked: 0, total: ids === "all" ? total : ids.length });
+
+    try {
+      const res = await fetch("/api/link-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, batchSize: 5 }),
+      });
+
+      if (!res.ok) throw new Error("Failed to check links");
+
+      const data = await res.json();
+      setCheckProgress({ checked: data.checked, total: data.total });
+
+      // Refresh bookmarks and link health after checking
+      await Promise.all([fetchBookmarks(), fetchLinkHealth()]);
+    } catch (err) {
+      console.error("Error checking links:", err);
+    } finally {
+      setCheckingLinks(false);
+      setCheckProgress(null);
+    }
+  };
+
+  // Delete broken links in bulk
+  const deleteBrokenLinks = async () => {
+    if (!confirm(`Are you sure you want to delete all ${linkHealth?.broken ?? 0} broken links?`)) {
+      return;
+    }
+
+    try {
+      // Fetch all broken bookmarks
+      const res = await fetch("/api/bookmarks?linkStatus=broken&limit=1000");
+      if (!res.ok) throw new Error("Failed to fetch broken bookmarks");
+
+      const data: PaginatedResponse = await res.json();
+
+      // Delete each broken bookmark
+      for (const bookmark of data.data) {
+        await fetch(`/api/bookmarks/${bookmark.id}`, { method: "DELETE" });
+      }
+
+      // Refresh
+      await Promise.all([fetchBookmarks(), fetchLinkHealth()]);
+    } catch (err) {
+      console.error("Error deleting broken links:", err);
+    }
+  };
+
+  // Selection helpers
+  const toggleSelection = (id: number) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(bookmarks.map((b) => b.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const isAllSelected = bookmarks.length > 0 && bookmarks.every((b) => selectedIds.has(b.id));
+  const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
+
+  // Bulk delete
+  const bulkDelete = async () => {
+    setBulkActionLoading(true);
+    try {
+      for (const id of selectedIds) {
+        await fetch(`/api/bookmarks/${id}`, { method: "DELETE" });
+      }
+      clearSelection();
+      await Promise.all([fetchBookmarks(), fetchLinkHealth()]);
+    } catch (err) {
+      console.error("Error deleting bookmarks:", err);
+    } finally {
+      setBulkActionLoading(false);
+      setShowBulkDeleteModal(false);
+    }
+  };
+
+  // Bulk move to folder
+  const bulkMoveToFolder = async (folder: string) => {
+    setBulkActionLoading(true);
+    try {
+      for (const id of selectedIds) {
+        await fetch(`/api/bookmarks/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folder: folder || null }),
+        });
+      }
+      clearSelection();
+      await fetchBookmarks();
+    } catch (err) {
+      console.error("Error moving bookmarks:", err);
+    } finally {
+      setBulkActionLoading(false);
+      setShowBulkMoveModal(false);
+    }
+  };
+
+  // Bulk add tags
+  const bulkAddTags = async (newTags: string) => {
+    setBulkActionLoading(true);
+    try {
+      for (const id of selectedIds) {
+        const bookmark = bookmarks.find((b) => b.id === id);
+        if (bookmark) {
+          const existingTags = bookmark.tags ? bookmark.tags.split(",").map((t) => t.trim()) : [];
+          const tagsToAdd = newTags.split(",").map((t) => t.trim()).filter(Boolean);
+          const combinedTags = [...new Set([...existingTags, ...tagsToAdd])].join(", ");
+
+          await fetch(`/api/bookmarks/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tags: combinedTags }),
+          });
+        }
+      }
+      clearSelection();
+      await fetchBookmarks();
+    } catch (err) {
+      console.error("Error adding tags:", err);
+    } finally {
+      setBulkActionLoading(false);
+      setShowBulkTagModal(false);
+    }
+  };
+
+  // Bulk export
+  const bulkExport = async () => {
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+
+      if (!res.ok) throw new Error("Failed to export bookmarks");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bookmarks-export-${new Date().toISOString().split("T")[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      clearSelection();
+    } catch (err) {
+      console.error("Error exporting bookmarks:", err);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Clear selection when page changes
+  useEffect(() => {
+    clearSelection();
+  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter]);
 
   useEffect(() => {
     fetchBookmarks();
   }, [fetchBookmarks]);
+
+  // Fetch link health on mount and when bookmarks change
+  useEffect(() => {
+    fetchLinkHealth();
+  }, [fetchLinkHealth]);
 
   // Handle search submit
   const handleSearch = (e: React.FormEvent) => {
@@ -444,36 +986,143 @@ export default function BookmarksPage() {
     setSearchInput("");
     setBrowserFilter("");
     setFolderFilter("");
+    setTagFilter("");
+    setLinkStatusFilter("");
     setPage(1);
   };
 
-  const hasFilters = search || browserFilter || folderFilter;
+  const hasFilters = search || browserFilter || folderFilter || tagFilter || linkStatusFilter;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {/* Header */}
       <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                All Bookmarks
-              </h1>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {total.toLocaleString()} bookmark{total !== 1 ? "s" : ""} total
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                  All Bookmarks
+                </h1>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {total.toLocaleString()} bookmark{total !== 1 ? "s" : ""} total
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => checkLinks(bookmarks.map((b) => b.id))}
+                disabled={checkingLinks || bookmarks.length === 0}
+                className="flex items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                {checkingLinks ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link2 className="h-4 w-4" />
+                )}
+                {checkingLinks ? `Checking ${checkProgress?.checked ?? 0}/${checkProgress?.total ?? 0}` : "Check Page"}
+              </button>
+              <button
+                onClick={() => checkLinks("all")}
+                disabled={checkingLinks || total === 0}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {checkingLinks ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LinkIcon className="h-4 w-4" />
+                )}
+                Check All
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Link Health Bar */}
+        {linkHealth && linkHealth.checked > 0 && (
+          <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-zinc-500" />
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Link Health
+                </span>
+              </div>
+              <span className={`text-sm font-bold ${
+                linkHealth.healthPercentage >= 80 ? "text-green-600 dark:text-green-400" :
+                linkHealth.healthPercentage >= 50 ? "text-amber-600 dark:text-amber-400" :
+                "text-red-600 dark:text-red-400"
+              }`}>
+                {linkHealth.healthPercentage}% healthy
+              </span>
+            </div>
+            <div className="flex h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+              {linkHealth.valid > 0 && (
+                <div
+                  className="bg-green-500"
+                  style={{ width: `${(linkHealth.valid / linkHealth.total) * 100}%` }}
+                  title={`${linkHealth.valid} valid`}
+                />
+              )}
+              {linkHealth.redirect > 0 && (
+                <div
+                  className="bg-blue-500"
+                  style={{ width: `${(linkHealth.redirect / linkHealth.total) * 100}%` }}
+                  title={`${linkHealth.redirect} redirects`}
+                />
+              )}
+              {linkHealth.timeout > 0 && (
+                <div
+                  className="bg-amber-500"
+                  style={{ width: `${(linkHealth.timeout / linkHealth.total) * 100}%` }}
+                  title={`${linkHealth.timeout} timeouts`}
+                />
+              )}
+              {linkHealth.broken > 0 && (
+                <div
+                  className="bg-red-500"
+                  style={{ width: `${(linkHealth.broken / linkHealth.total) * 100}%` }}
+                  title={`${linkHealth.broken} broken`}
+                />
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-4 text-xs">
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-green-500" /> {linkHealth.valid} valid
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-blue-500" /> {linkHealth.redirect} redirects
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-amber-500" /> {linkHealth.timeout} timeouts
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-red-500" /> {linkHealth.broken} broken
+              </span>
+              <span className="flex items-center gap-1 text-zinc-400">
+                <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-zinc-600" /> {linkHealth.total - linkHealth.checked} unchecked
+              </span>
+              {linkHealth.broken > 0 && (
+                <button
+                  onClick={deleteBrokenLinks}
+                  className="ml-auto flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Delete {linkHealth.broken} broken
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Search and Filters */}
         <div className="mb-6 space-y-4">
           {/* Search Bar */}
@@ -537,6 +1186,40 @@ export default function BookmarksPage() {
               ))}
             </select>
 
+            {/* Tag Filter */}
+            <select
+              value={tagFilter}
+              onChange={(e) => {
+                setTagFilter(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            >
+              <option value="">All Tags</option>
+              {tags.map((t) => (
+                <option key={t.tag} value={t.tag}>
+                  {t.tag} ({t.count})
+                </option>
+              ))}
+            </select>
+
+            {/* Link Status Filter */}
+            <select
+              value={linkStatusFilter}
+              onChange={(e) => {
+                setLinkStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            >
+              <option value="">All Link Status</option>
+              <option value="valid">Valid</option>
+              <option value="broken">Broken</option>
+              <option value="timeout">Timeout</option>
+              <option value="redirect">Redirect</option>
+              <option value="unchecked">Unchecked</option>
+            </select>
+
             {/* Clear Filters */}
             {hasFilters && (
               <button
@@ -549,6 +1232,59 @@ export default function BookmarksPage() {
             )}
           </div>
         </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedIds.size > 0 && (
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              {selectedIds.size} selected
+            </span>
+            <div className="h-4 w-px bg-blue-300 dark:bg-blue-700" />
+            <button
+              onClick={() => setShowBulkDeleteModal(true)}
+              disabled={bulkActionLoading}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-950/50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
+            <button
+              onClick={() => setShowBulkMoveModal(true)}
+              disabled={bulkActionLoading}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              <FolderInput className="h-4 w-4" />
+              Move to Folder
+            </button>
+            <button
+              onClick={() => setShowBulkTagModal(true)}
+              disabled={bulkActionLoading}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              <Tags className="h-4 w-4" />
+              Add Tags
+            </button>
+            <button
+              onClick={bulkExport}
+              disabled={bulkActionLoading}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {bulkActionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Export
+            </button>
+            <button
+              onClick={clearSelection}
+              className="ml-auto flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+            >
+              <X className="h-4 w-4" />
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Bookmarks List */}
         <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -590,11 +1326,42 @@ export default function BookmarksPage() {
             </div>
           ) : (
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {/* Select All Header */}
+              <div className="flex items-center gap-4 border-b border-zinc-100 bg-zinc-50 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <button
+                  onClick={() => (isAllSelected ? clearSelection() : selectAll())}
+                  className="flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                >
+                  {isAllSelected ? (
+                    <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  ) : isSomeSelected ? (
+                    <MinusSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  ) : (
+                    <Square className="h-5 w-5" />
+                  )}
+                  <span>{isAllSelected ? "Deselect all" : "Select all on this page"}</span>
+                </button>
+              </div>
+
               {bookmarks.map((bookmark) => (
                 <div
                   key={bookmark.id}
-                  className="flex items-center gap-4 p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  className={`flex items-center gap-4 p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
+                    selectedIds.has(bookmark.id) ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
+                  }`}
                 >
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => toggleSelection(bookmark.id)}
+                    className="flex-shrink-0"
+                  >
+                    {selectedIds.has(bookmark.id) ? (
+                      <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    ) : (
+                      <Square className="h-5 w-5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
+                    )}
+                  </button>
+
                   {/* Favicon */}
                   <Favicon url={bookmark.url} favicon={bookmark.favicon} />
 
@@ -627,7 +1394,26 @@ export default function BookmarksPage() {
                           {bookmark.browser}
                         </span>
                       )}
+                      <LinkStatusBadge status={bookmark.linkStatus} />
                     </div>
+                    {bookmark.tags && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {bookmark.tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag) => (
+                          <button
+                            key={tag}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setTagFilter(tag);
+                              setPage(1);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                          >
+                            <Tag className="h-3 w-3" />
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -730,9 +1516,49 @@ export default function BookmarksPage() {
           onClose={() => setDeletingBookmark(null)}
           onDelete={() => {
             setBookmarks((prev) => prev.filter((b) => b.id !== deletingBookmark.id));
-            setTotal((t) => t - 1);
+            setTotal((prevTotal) => {
+              const newTotal = prevTotal - 1;
+              // Recalculate total pages and adjust current page if needed
+              const newTotalPages = Math.max(1, Math.ceil(newTotal / limit));
+              setTotalPages(newTotalPages);
+              if (page > newTotalPages) {
+                setPage(newTotalPages);
+              }
+              return newTotal;
+            });
             setDeletingBookmark(null);
           }}
+        />
+      )}
+
+      {/* Bulk Delete Modal */}
+      {showBulkDeleteModal && (
+        <BulkDeleteModal
+          count={selectedIds.size}
+          onClose={() => setShowBulkDeleteModal(false)}
+          onDelete={bulkDelete}
+          loading={bulkActionLoading}
+        />
+      )}
+
+      {/* Bulk Move Modal */}
+      {showBulkMoveModal && (
+        <BulkMoveModal
+          count={selectedIds.size}
+          folders={folders}
+          onClose={() => setShowBulkMoveModal(false)}
+          onMove={bulkMoveToFolder}
+          loading={bulkActionLoading}
+        />
+      )}
+
+      {/* Bulk Tag Modal */}
+      {showBulkTagModal && (
+        <BulkTagModal
+          count={selectedIds.size}
+          onClose={() => setShowBulkTagModal(false)}
+          onAddTags={bulkAddTags}
+          loading={bulkActionLoading}
         />
       )}
     </div>

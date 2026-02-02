@@ -12,6 +12,8 @@ import {
   Loader2,
   RefreshCw,
   ExternalLink,
+  Link2,
+  AlertTriangle,
 } from "lucide-react";
 import BookmarkUploader from "@/src/components/BookmarkUploader";
 
@@ -80,8 +82,20 @@ function formatRelativeTime(date: Date): string {
   return new Date(date).toLocaleDateString();
 }
 
+interface LinkHealthResponse {
+  total: number;
+  checked: number;
+  unchecked: number;
+  valid: number;
+  broken: number;
+  timeout: number;
+  redirect: number;
+  healthPercentage: number;
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [linkHealth, setLinkHealth] = useState<LinkHealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,10 +103,19 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/stats");
-      if (!res.ok) throw new Error("Failed to fetch stats");
-      const data = await res.json();
-      setStats(data);
+      const [statsRes, linkHealthRes] = await Promise.all([
+        fetch("/api/stats"),
+        fetch("/api/link-check"),
+      ]);
+
+      if (!statsRes.ok) throw new Error("Failed to fetch stats");
+      const statsData = await statsRes.json();
+      setStats(statsData);
+
+      if (linkHealthRes.ok) {
+        const linkHealthData = await linkHealthRes.json();
+        setLinkHealth(linkHealthData);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load statistics");
     } finally {
@@ -181,8 +204,64 @@ export default function Dashboard() {
                 </p>
               </div>
 
+              {/* Link Health */}
+              <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-lg p-2 ${
+                    !linkHealth || linkHealth.checked === 0
+                      ? "bg-zinc-100 dark:bg-zinc-800"
+                      : linkHealth.healthPercentage >= 80
+                        ? "bg-green-100 dark:bg-green-900/30"
+                        : linkHealth.healthPercentage >= 50
+                          ? "bg-amber-100 dark:bg-amber-900/30"
+                          : "bg-red-100 dark:bg-red-900/30"
+                  }`}>
+                    {linkHealth && linkHealth.broken > 0 ? (
+                      <AlertTriangle className={`h-5 w-5 ${
+                        linkHealth.healthPercentage >= 80
+                          ? "text-green-600 dark:text-green-400"
+                          : linkHealth.healthPercentage >= 50
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-red-600 dark:text-red-400"
+                      }`} />
+                    ) : (
+                      <Link2 className={`h-5 w-5 ${
+                        !linkHealth || linkHealth.checked === 0
+                          ? "text-zinc-500 dark:text-zinc-400"
+                          : "text-green-600 dark:text-green-400"
+                      }`} />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                    Link Health
+                  </span>
+                </div>
+                {linkHealth && linkHealth.checked > 0 ? (
+                  <div>
+                    <p className={`mt-3 text-3xl font-bold ${
+                      linkHealth.healthPercentage >= 80
+                        ? "text-green-600 dark:text-green-400"
+                        : linkHealth.healthPercentage >= 50
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-red-600 dark:text-red-400"
+                    }`}>
+                      {linkHealth.healthPercentage}%
+                    </p>
+                    {linkHealth.broken > 0 && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        {linkHealth.broken} broken link{linkHealth.broken !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+                    Not checked yet
+                  </p>
+                )}
+              </div>
+
               {/* Browser Stats */}
-              {stats.bookmarksByBrowser.slice(0, 3).map((browser, index) => (
+              {stats.bookmarksByBrowser.slice(0, 2).map((browser, index) => (
                 <div
                   key={browser.browser ?? `unknown-${index}`}
                   className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"

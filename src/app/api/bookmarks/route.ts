@@ -26,6 +26,8 @@ interface BookmarkResponse {
   dateAdded: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  linkStatus: string | null;
+  lastChecked: Date | null;
 }
 
 interface PaginatedResponse {
@@ -132,6 +134,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
     const search = searchParams.get("search")?.trim();
     const browser = searchParams.get("browser")?.trim();
     const folder = searchParams.get("folder")?.trim();
+    const tag = searchParams.get("tag")?.trim();
+    const linkStatus = searchParams.get("linkStatus")?.trim();
 
     // Build where conditions
     const conditions = [];
@@ -152,6 +156,35 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
 
     if (folder) {
       conditions.push(eq(bookmarks.folder, folder));
+    }
+
+    if (tag) {
+      // Match tag in comma-separated list (handles: "tag", "tag,other", "other,tag", "a,tag,b")
+      conditions.push(
+        or(
+          eq(bookmarks.tags, tag),
+          like(bookmarks.tags, `${tag},%`),
+          like(bookmarks.tags, `%,${tag}`),
+          like(bookmarks.tags, `%,${tag},%`)
+        )
+      );
+    }
+
+    if (linkStatus) {
+      const validStatuses = ["valid", "broken", "timeout", "redirect", "unchecked"] as const;
+      type LinkStatusType = typeof validStatuses[number];
+
+      if (linkStatus === "unchecked") {
+        // Include both explicit "unchecked" and null values
+        conditions.push(
+          or(
+            eq(bookmarks.linkStatus, "unchecked" as LinkStatusType),
+            sql`${bookmarks.linkStatus} IS NULL`
+          )
+        );
+      } else if (validStatuses.includes(linkStatus as LinkStatusType)) {
+        conditions.push(eq(bookmarks.linkStatus, linkStatus as LinkStatusType));
+      }
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
