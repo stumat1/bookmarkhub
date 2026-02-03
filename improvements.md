@@ -116,31 +116,31 @@ Visual previews of bookmarked pages.
 - [x] Fallback to favicon + domain for failed captures
 - [x] Option to refresh/update preview
 
-### 9. Reading List / "Read Later"
+### 9. Reading List / "Read Later" DONE
 
 **Priority:** Medium | **Effort:** Medium
 
 Separate workflow for content to consume later.
 
-- [ ] Add `isReadLater` and `isRead` fields to schema
-- [ ] "Save for Later" action on bookmarks
-- [ ] Dedicated "Reading List" view
-- [ ] Mark as "Read" to archive
-- [ ] Reading list count on dashboard
-- [ ] Optional reading progress notes
+- [x] Add `isReadLater` and `isRead` fields to schema
+- [x] "Save for Later" action on bookmarks
+- [x] Dedicated "Reading List" view
+- [x] Mark as "Read" to archive
+- [x] Reading list count on dashboard
+- [x] Optional reading progress notes
 
-### 10. Smart Duplicate Management
+### 10. Smart Duplicate Management DONE
 
 **Priority:** Medium | **Effort:** Medium
 
 Proactive duplicate detection beyond import time.
 
-- [ ] "Find Duplicates" tool in bookmarks view
-- [ ] Detect exact URL matches
-- [ ] Detect similar URLs (with/without trailing slash, http vs https)
-- [ ] Detect similar titles with different URLs
-- [ ] Merge duplicates (combine tags, keep newest)
-- [ ] Dashboard duplicate count indicator
+- [x] "Find Duplicates" tool in bookmarks view
+- [x] Detect exact URL matches
+- [x] Detect similar URLs (with/without trailing slash, http vs https)
+- [x] Detect similar titles with different URLs
+- [x] Merge duplicates (combine tags, keep newest)
+- [x] Dashboard duplicate count indicator
 
 ### 11. Keyboard Shortcuts
 
@@ -209,12 +209,14 @@ Features that may be valuable but require more research or infrastructure:
 Some features require schema updates:
 
 ```typescript
-// New fields for bookmarks table
-isFavorite: integer({ mode: 'boolean' }).default(false),
-isReadLater: integer({ mode: 'boolean' }).default(false),
-isRead: integer({ mode: 'boolean' }).default(false),
-linkStatus: text(), // 'valid' | 'broken' | 'timeout' | 'redirect' | 'unchecked'
-lastChecked: integer({ mode: 'timestamp' }),
+// New fields for bookmarks table (all implemented)
+isFavorite: integer({ mode: 'boolean' }).default(false), // DONE
+isReadLater: integer({ mode: 'boolean' }).default(false), // DONE
+isRead: integer({ mode: 'boolean' }).default(false), // DONE
+readingNotes: text(), // DONE - for reading progress tracking
+linkStatus: text(), // 'valid' | 'broken' | 'timeout' | 'redirect' | 'unchecked' // DONE
+lastChecked: integer({ mode: 'timestamp' }), // DONE
+thumbnailUrl: text(), // DONE - for bookmark previews
 ```
 
 ### New Indexes

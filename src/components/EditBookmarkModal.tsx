@@ -16,6 +16,9 @@ export interface Bookmark {
   dateAdded: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  isReadLater?: boolean;
+  isRead?: boolean;
+  readingNotes?: string | null;
 }
 
 interface EditBookmarkModalProps {
@@ -77,6 +80,7 @@ export default function EditBookmarkModal({
   const [folder, setFolder] = useState(bookmark.folder || "");
   const [tags, setTags] = useState(bookmark.tags || "");
   const [description, setDescription] = useState(bookmark.description || "");
+  const [readingNotes, setReadingNotes] = useState(bookmark.readingNotes || "");
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
@@ -94,6 +98,7 @@ export default function EditBookmarkModal({
     setFolder(bookmark.folder || "");
     setTags(bookmark.tags || "");
     setDescription(bookmark.description || "");
+    setReadingNotes(bookmark.readingNotes || "");
     setErrors({});
     setNotification(null);
   }, [bookmark]);
@@ -173,6 +178,7 @@ export default function EditBookmarkModal({
           folder: folder.trim() || null,
           tags: tags.trim() || null,
           description: description.trim() || null,
+          readingNotes: readingNotes.trim() || null,
         }),
       });
 
@@ -205,7 +211,7 @@ export default function EditBookmarkModal({
     } finally {
       setIsLoading(false);
     }
-  }, [bookmark.id, title, url, folder, tags, description, validateForm, onSave, onClose]);
+  }, [bookmark.id, title, url, folder, tags, description, readingNotes, validateForm, onSave, onClose]);
 
   // Handle form submit
   const handleSubmit = useCallback(
@@ -388,6 +394,30 @@ export default function EditBookmarkModal({
               placeholder="Add any notes about this bookmark..."
             />
           </div>
+
+          {/* Reading Progress Notes (show when bookmark is in reading list) */}
+          {bookmark.isReadLater && (
+            <div>
+              <label
+                htmlFor="edit-reading-notes"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Reading Progress
+              </label>
+              <textarea
+                id="edit-reading-notes"
+                value={readingNotes}
+                onChange={(e) => setReadingNotes(e.target.value)}
+                disabled={isLoading}
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                placeholder="Track your reading progress, e.g., 'Read chapters 1-3, need to finish section 4'"
+              />
+              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                Track your progress on items in your reading list
+              </p>
+            </div>
+          )}
         </form>
 
         {/* Footer */}

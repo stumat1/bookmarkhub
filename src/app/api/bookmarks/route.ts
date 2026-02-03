@@ -30,6 +30,9 @@ interface BookmarkResponse {
   lastChecked: Date | null;
   isFavorite: boolean;
   thumbnailUrl: string | null;
+  isReadLater: boolean;
+  isRead: boolean;
+  readingNotes: string | null;
 }
 
 interface PaginatedResponse {
@@ -204,6 +207,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
     const tag = searchParams.get("tag")?.trim();
     const linkStatus = searchParams.get("linkStatus")?.trim();
     const favorite = searchParams.get("favorite")?.trim();
+    const readLater = searchParams.get("readLater")?.trim();
+    const read = searchParams.get("read")?.trim();
 
     // Sort params
     const sortField = searchParams.get("sort")?.trim() || "createdAt";
@@ -311,6 +316,16 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
 
     if (favorite === "true") {
       conditions.push(eq(bookmarks.isFavorite, true));
+    }
+
+    // Reading list filters
+    if (readLater === "true") {
+      conditions.push(eq(bookmarks.isReadLater, true));
+    }
+    if (read === "true") {
+      conditions.push(eq(bookmarks.isRead, true));
+    } else if (read === "false") {
+      conditions.push(eq(bookmarks.isRead, false));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

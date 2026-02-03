@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Filter,
@@ -40,6 +41,10 @@ import {
   RefreshCw,
   Eye,
   ImageOff,
+  BookOpen,
+  BookCheck,
+  Copy,
+  Merge,
 } from "lucide-react";
 
 // Types
@@ -61,6 +66,9 @@ interface BookmarkData {
   lastChecked: Date | null;
   isFavorite: boolean;
   thumbnailUrl: string | null;
+  isReadLater: boolean;
+  isRead: boolean;
+  readingNotes: string | null;
 }
 
 interface PaginatedResponse {
@@ -1078,7 +1086,293 @@ function PreviewModal({
   );
 }
 
-export default function BookmarksPage() {
+// Duplicate types
+interface DuplicateGroup {
+  type: "exact_url" | "similar_url" | "similar_title";
+  reason: string;
+  bookmarks: BookmarkData[];
+}
+
+interface DuplicatesResponse {
+  groups: DuplicateGroup[];
+  totalDuplicates: number;
+  totalGroups: number;
+}
+
+// Duplicates Modal Component
+function DuplicatesModal({
+  onClose,
+  onMergeComplete,
+}: {
+  onClose: () => void;
+  onMergeComplete: () => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [duplicates, setDuplicates] = useState<DuplicatesResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [merging, setMerging] = useState<number | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set([0]));
+
+  // Fetch duplicates on mount
+  useEffect(() => {
+    const fetchDuplicates = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/duplicates");
+        if (!res.ok) throw new Error("Failed to fetch duplicates");
+        const data = await res.json();
+        setDuplicates(data);
+        // Expand first group by default if there are any
+        if (data.groups.length > 0) {
+          setExpandedGroups(new Set([0]));
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load duplicates");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDuplicates();
+  }, []);
+
+  const toggleGroup = (index: number) => {
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const handleMerge = async (group: DuplicateGroup, keepIndex: number, mergeTags: boolean) => {
+    const keepBookmark = group.bookmarks[keepIndex];
+    const deleteIds = group.bookmarks
+      .filter((_, i) => i !== keepIndex)
+      .map((b) => b.id);
+
+    setMerging(keepBookmark.id);
+    try {
+      const res = await fetch("/api/duplicates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keepId: keepBookmark.id,
+          deleteIds,
+          mergeTags,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to merge duplicates");
+
+      // Refresh duplicates
+      const refreshRes = await fetch("/api/duplicates");
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setDuplicates(data);
+      }
+      onMergeComplete();
+    } catch (err) {
+      console.error("Error merging duplicates:", err);
+    } finally {
+      setMerging(null);
+    }
+  };
+
+  const getTypeLabel = (type: DuplicateGroup["type"]) => {
+    switch (type) {
+      case "exact_url":
+        return { label: "Exact URL", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" };
+      case "similar_url":
+        return { label: "Similar URL", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" };
+      case "similar_title":
+        return { label: "Similar Title", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" };
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-xl dark:bg-zinc-900">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-purple-100 p-2 dark:bg-purple-900/30">
+              <Copy className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Duplicate Management
+              </h3>
+              {duplicates && (
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {duplicates.totalDuplicates} duplicate{duplicates.totalDuplicates !== 1 ? "s" : ""} in {duplicates.totalGroups} group{duplicates.totalGroups !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+            </div>
+          ) : error ? (
+            <div className="py-12 text-center">
+              <p className="text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          ) : !duplicates || duplicates.groups.length === 0 ? (
+            <div className="py-12 text-center">
+              <div className="mx-auto mb-4 w-fit rounded-full bg-green-100 p-4 dark:bg-green-900/30">
+                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h4 className="font-medium text-zinc-900 dark:text-zinc-100">
+                No duplicates found
+              </h4>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Your bookmark collection is clean!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {duplicates.groups.map((group, groupIndex) => {
+                const typeInfo = getTypeLabel(group.type);
+                const isExpanded = expandedGroups.has(groupIndex);
+
+                return (
+                  <div
+                    key={groupIndex}
+                    className="rounded-lg border border-zinc-200 dark:border-zinc-800"
+                  >
+                    {/* Group Header */}
+                    <button
+                      onClick={() => toggleGroup(groupIndex)}
+                      className="flex w-full items-center justify-between p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeInfo.color}`}>
+                          {typeInfo.label}
+                        </span>
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          {group.bookmarks.length} bookmarks
+                        </span>
+                      </div>
+                      <ChevronRight
+                        className={`h-5 w-5 text-zinc-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                      />
+                    </button>
+
+                    {/* Group Content */}
+                    {isExpanded && (
+                      <div className="border-t border-zinc-200 p-3 dark:border-zinc-800">
+                        <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+                          {group.reason}
+                        </p>
+                        <div className="space-y-2">
+                          {group.bookmarks.map((bookmark, bookmarkIndex) => (
+                            <div
+                              key={bookmark.id}
+                              className="flex items-start gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
+                            >
+                              <Favicon url={bookmark.url} favicon={bookmark.favicon} />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                                  {bookmark.title}
+                                </p>
+                                <a
+                                  href={bookmark.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 truncate text-sm text-blue-600 hover:underline dark:text-blue-400"
+                                >
+                                  <span className="truncate">{bookmark.url}</span>
+                                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                </a>
+                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                                  {bookmark.folder && (
+                                    <span className="flex items-center gap-1">
+                                      <FolderOpen className="h-3 w-3" />
+                                      {bookmark.folder}
+                                    </span>
+                                  )}
+                                  {bookmark.tags && (
+                                    <span className="flex items-center gap-1">
+                                      <Tag className="h-3 w-3" />
+                                      {bookmark.tags}
+                                    </span>
+                                  )}
+                                  <span>
+                                    Added: {new Date(bookmark.createdAt).toLocaleDateString()}
+                                  </span>
+                                  {bookmarkIndex === 0 && (
+                                    <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                      Newest
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  onClick={() => handleMerge(group, bookmarkIndex, true)}
+                                  disabled={merging !== null}
+                                  className="flex items-center gap-1 rounded-lg bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                                  title="Keep this bookmark and merge tags from others"
+                                >
+                                  {merging === bookmark.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Merge className="h-3 w-3" />
+                                  )}
+                                  Keep
+                                </button>
+                                <button
+                                  onClick={() => handleMerge(group, bookmarkIndex, false)}
+                                  disabled={merging !== null}
+                                  className="flex items-center gap-1 rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                  title="Keep this bookmark without merging tags"
+                                >
+                                  Keep Only
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end border-t border-zinc-200 p-4 dark:border-zinc-800">
+          <button
+            onClick={onClose}
+            className="rounded-lg bg-zinc-100 px-4 py-2 font-medium text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookmarksPageContent() {
+  const searchParams = useSearchParams();
+
   const [bookmarks, setBookmarks] = useState<BookmarkData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1089,14 +1383,16 @@ export default function BookmarksPage() {
   const [total, setTotal] = useState(0);
   const limit = 50;
 
-  // Filters
+  // Filters (initialized from URL params)
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [browserFilter, setBrowserFilter] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [linkStatusFilter, setLinkStatusFilter] = useState("");
-  const [favoriteFilter, setFavoriteFilter] = useState(false);
+  const [favoriteFilter, setFavoriteFilter] = useState(() => searchParams.get("favorite") === "true");
+  const [readLaterFilter, setReadLaterFilter] = useState(() => searchParams.get("readLater") === "true");
+  const [readFilter, setReadFilter] = useState<"" | "unread" | "read">("");
 
   // Sorting
   const [sortBy, setSortBy] = useState<string>(() => {
@@ -1151,6 +1447,9 @@ export default function BookmarksPage() {
   // Preview modal
   const [previewBookmark, setPreviewBookmark] = useState<BookmarkData | null>(null);
   const [refreshingPreview, setRefreshingPreview] = useState(false);
+
+  // Duplicates modal
+  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
 
   // Load search history on mount
   useEffect(() => {
@@ -1227,6 +1526,9 @@ export default function BookmarksPage() {
       if (tagFilter) params.set("tag", tagFilter);
       if (linkStatusFilter) params.set("linkStatus", linkStatusFilter);
       if (favoriteFilter) params.set("favorite", "true");
+      if (readLaterFilter) params.set("readLater", "true");
+      if (readFilter === "unread") params.set("read", "false");
+      if (readFilter === "read") params.set("read", "true");
       params.set("sort", sortBy);
       params.set("order", sortOrder);
 
@@ -1250,7 +1552,7 @@ export default function BookmarksPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter, favoriteFilter, sortBy, sortOrder]);
+  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter, favoriteFilter, readLaterFilter, readFilter, sortBy, sortOrder]);
 
   // Check links for current page or all bookmarks
   const checkLinks = async (ids: number[] | "all") => {
@@ -1444,6 +1746,46 @@ export default function BookmarksPage() {
     }
   };
 
+  // Toggle read later status
+  const toggleReadLater = async (bookmark: BookmarkData) => {
+    try {
+      const res = await fetch(`/api/bookmarks/${bookmark.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isReadLater: !bookmark.isReadLater }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update read later status");
+
+      const updated = await res.json();
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+    } catch (err) {
+      console.error("Error toggling read later:", err);
+    }
+  };
+
+  // Toggle read status
+  const toggleRead = async (bookmark: BookmarkData) => {
+    try {
+      const res = await fetch(`/api/bookmarks/${bookmark.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isRead: !bookmark.isRead }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update read status");
+
+      const updated = await res.json();
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+    } catch (err) {
+      console.error("Error toggling read status:", err);
+    }
+  };
+
   // Refresh preview for a bookmark
   const refreshPreview = async (bookmark: BookmarkData) => {
     setRefreshingPreview(true);
@@ -1480,7 +1822,7 @@ export default function BookmarksPage() {
   // Clear selection when page changes
   useEffect(() => {
     clearSelection();
-  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter, favoriteFilter]);
+  }, [page, search, browserFilter, folderFilter, tagFilter, linkStatusFilter, favoriteFilter, readLaterFilter, readFilter]);
 
   useEffect(() => {
     fetchBookmarks();
@@ -1527,10 +1869,12 @@ export default function BookmarksPage() {
     setTagFilter("");
     setLinkStatusFilter("");
     setFavoriteFilter(false);
+    setReadLaterFilter(false);
+    setReadFilter("");
     setPage(1);
   };
 
-  const hasFilters = search || browserFilter || folderFilter || tagFilter || linkStatusFilter || favoriteFilter;
+  const hasFilters = search || browserFilter || folderFilter || tagFilter || linkStatusFilter || favoriteFilter || readLaterFilter || readFilter;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -1555,6 +1899,13 @@ export default function BookmarksPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDuplicatesModal(true)}
+                className="flex items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <Copy className="h-4 w-4" />
+                Find Duplicates
+              </button>
               <button
                 onClick={() => checkLinks(bookmarks.map((b) => b.id))}
                 disabled={checkingLinks || bookmarks.length === 0}
@@ -1832,6 +2183,41 @@ export default function BookmarksPage() {
               <Star className={`h-4 w-4 ${favoriteFilter ? "fill-amber-500" : ""}`} />
               Favorites
             </button>
+
+            {/* Reading List Filter */}
+            <button
+              onClick={() => {
+                setReadLaterFilter(!readLaterFilter);
+                if (!readLaterFilter) {
+                  setReadFilter("");
+                }
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                readLaterFilter
+                  ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              }`}
+            >
+              <BookOpen className={`h-4 w-4 ${readLaterFilter ? "fill-blue-500" : ""}`} />
+              Reading List
+            </button>
+
+            {/* Read Status Filter (only show when reading list is active) */}
+            {readLaterFilter && (
+              <select
+                value={readFilter}
+                onChange={(e) => {
+                  setReadFilter(e.target.value as "" | "unread" | "read");
+                  setPage(1);
+                }}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">All Items</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+              </select>
+            )}
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-2 ml-auto">
@@ -2125,6 +2511,30 @@ export default function BookmarksPage() {
                       <Star className={`h-4 w-4 ${bookmark.isFavorite ? "fill-amber-500" : ""}`} />
                     </button>
                     <button
+                      onClick={() => toggleReadLater(bookmark)}
+                      className={`rounded-lg p-2 transition-colors ${
+                        bookmark.isReadLater
+                          ? "text-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/30"
+                          : "text-zinc-400 hover:bg-zinc-100 hover:text-blue-500 dark:hover:bg-zinc-800"
+                      }`}
+                      title={bookmark.isReadLater ? "Remove from reading list" : "Add to reading list"}
+                    >
+                      <BookOpen className={`h-4 w-4 ${bookmark.isReadLater ? "fill-blue-500" : ""}`} />
+                    </button>
+                    {bookmark.isReadLater && (
+                      <button
+                        onClick={() => toggleRead(bookmark)}
+                        className={`rounded-lg p-2 transition-colors ${
+                          bookmark.isRead
+                            ? "text-green-500 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-950/30"
+                            : "text-zinc-400 hover:bg-zinc-100 hover:text-green-500 dark:hover:bg-zinc-800"
+                        }`}
+                        title={bookmark.isRead ? "Mark as unread" : "Mark as read"}
+                      >
+                        <BookCheck className={`h-4 w-4 ${bookmark.isRead ? "fill-green-500" : ""}`} />
+                      </button>
+                    )}
+                    <button
                       onClick={() => setEditingBookmark(bookmark)}
                       className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                       title="Edit"
@@ -2282,6 +2692,35 @@ export default function BookmarksPage() {
           refreshing={refreshingPreview}
         />
       )}
+
+      {/* Duplicates Modal */}
+      {showDuplicatesModal && (
+        <DuplicatesModal
+          onClose={() => setShowDuplicatesModal(false)}
+          onMergeComplete={fetchBookmarks}
+        />
+      )}
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function BookmarksPageLoading() {
+  return (
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+      <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600 dark:border-zinc-700 dark:border-t-blue-400" />
+        <span>Loading bookmarks...</span>
+      </div>
+    </div>
+  );
+}
+
+// Wrap the page in Suspense to handle useSearchParams
+export default function BookmarksPage() {
+  return (
+    <Suspense fallback={<BookmarksPageLoading />}>
+      <BookmarksPageContent />
+    </Suspense>
   );
 }

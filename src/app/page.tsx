@@ -15,6 +15,8 @@ import {
   Link2,
   AlertTriangle,
   Star,
+  BookOpen,
+  Copy,
 } from "lucide-react";
 import BookmarkUploader from "@/src/components/BookmarkUploader";
 
@@ -32,10 +34,23 @@ interface RecentImport {
   createdAt: Date;
 }
 
+interface ReadingListStats {
+  readLaterCount: number;
+  unreadCount: number;
+  readCount: number;
+}
+
+interface DuplicateStats {
+  totalDuplicates: number;
+  totalGroups: number;
+}
+
 interface StatsResponse {
   totalBookmarks: number;
   bookmarksByBrowser: BrowserCount[];
   recentImports: RecentImport[];
+  readingList: ReadingListStats;
+  duplicates: DuplicateStats;
 }
 
 // Browser icon mapping
@@ -276,25 +291,68 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Browser Stats */}
-              {stats.bookmarksByBrowser.slice(0, 2).map((browser, index) => (
-                <div
-                  key={browser.browser ?? `unknown-${index}`}
-                  className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-zinc-100 p-2 dark:bg-zinc-800">
-                      {getBrowserIcon(browser.browser)}
-                    </div>
-                    <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                      {browser.browser ?? "Unknown"}
-                    </span>
+              {/* Reading List */}
+              <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+                    <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <p className="mt-3 text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                    {browser.count.toLocaleString()}
-                  </p>
+                  <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                    Reading List
+                  </span>
                 </div>
-              ))}
+                {stats.readingList && stats.readingList.readLaterCount > 0 ? (
+                  <div>
+                    <p className="mt-3 text-3xl font-bold text-blue-600 dark:text-blue-400">
+                      {stats.readingList.unreadCount}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      {stats.readingList.readCount} read, {stats.readingList.readLaterCount} total
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+                    No items yet
+                  </p>
+                )}
+              </div>
+
+              {/* Duplicates */}
+              <Link
+                href="/bookmarks"
+                className="rounded-xl border border-zinc-200 bg-white p-6 transition-all hover:border-purple-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-purple-700"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-lg p-2 ${
+                    stats.duplicates && stats.duplicates.totalDuplicates > 0
+                      ? "bg-purple-100 dark:bg-purple-900/30"
+                      : "bg-green-100 dark:bg-green-900/30"
+                  }`}>
+                    <Copy className={`h-5 w-5 ${
+                      stats.duplicates && stats.duplicates.totalDuplicates > 0
+                        ? "text-purple-600 dark:text-purple-400"
+                        : "text-green-600 dark:text-green-400"
+                    }`} />
+                  </div>
+                  <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                    Duplicates
+                  </span>
+                </div>
+                {stats.duplicates && stats.duplicates.totalDuplicates > 0 ? (
+                  <div>
+                    <p className="mt-3 text-3xl font-bold text-purple-600 dark:text-purple-400">
+                      {stats.duplicates.totalDuplicates}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      in {stats.duplicates.totalGroups} group{stats.duplicates.totalGroups !== 1 ? "s" : ""} - click to manage
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-green-600 dark:text-green-400">
+                    No duplicates found
+                  </p>
+                )}
+              </Link>
             </div>
           ) : null}
         </section>
@@ -330,6 +388,24 @@ export default function Dashboard() {
                   </h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">
                     Browse, search, and manage your saved bookmarks
+                  </p>
+                </div>
+                <ExternalLink className="h-5 w-5 text-zinc-400" />
+              </Link>
+
+              <Link
+                href="/bookmarks?readLater=true"
+                className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-6 transition-all hover:border-blue-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-700"
+              >
+                <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/30">
+                  <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Reading List
+                  </h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    View bookmarks you saved for later reading
                   </p>
                 </div>
                 <ExternalLink className="h-5 w-5 text-zinc-400" />

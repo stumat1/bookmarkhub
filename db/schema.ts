@@ -25,6 +25,10 @@ export const bookmarks = sqliteTable(
     isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
     // Preview thumbnail
     thumbnailUrl: text("thumbnail_url"),
+    // Reading list fields
+    isReadLater: integer("is_read_later", { mode: "boolean" }).notNull().default(false),
+    isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
+    readingNotes: text("reading_notes"),
   },
   (table) => [
     index("idx_bookmarks_url").on(table.url),
@@ -32,5 +36,6 @@ export const bookmarks = sqliteTable(
     index("idx_bookmarks_folder").on(table.folder),
     index("idx_bookmarks_link_status").on(table.linkStatus),
     index("idx_bookmarks_favorite").on(table.isFavorite),
+    index("idx_bookmarks_read_later").on(table.isReadLater),
   ]
 );

@@ -14,6 +14,9 @@ interface BookmarkUpdateRequest {
   browser?: string | null;
   dateAdded?: string | null;
   isFavorite?: boolean;
+  isReadLater?: boolean;
+  isRead?: boolean;
+  readingNotes?: string | null;
 }
 
 interface BookmarkResponse {
@@ -29,6 +32,9 @@ interface BookmarkResponse {
   createdAt: Date;
   updatedAt: Date;
   isFavorite: boolean;
+  isReadLater: boolean;
+  isRead: boolean;
+  readingNotes: string | null;
 }
 
 interface ErrorResponse {
@@ -70,7 +76,7 @@ function validateBookmarkUpdate(
   const body = data as Record<string, unknown>;
 
   // Check if at least one field is being updated
-  const updateableFields = ["url", "title", "description", "favicon", "folder", "tags", "browser", "dateAdded", "isFavorite"];
+  const updateableFields = ["url", "title", "description", "favicon", "folder", "tags", "browser", "dateAdded", "isFavorite", "isReadLater", "isRead", "readingNotes"];
   const hasUpdates = updateableFields.some((field) => field in body);
   if (!hasUpdates) {
     return { valid: false, errors: ["At least one field must be provided for update"] };
@@ -124,6 +130,18 @@ function validateBookmarkUpdate(
     errors.push("isFavorite must be a boolean");
   }
 
+  if (body.isReadLater !== undefined && typeof body.isReadLater !== "boolean") {
+    errors.push("isReadLater must be a boolean");
+  }
+
+  if (body.isRead !== undefined && typeof body.isRead !== "boolean") {
+    errors.push("isRead must be a boolean");
+  }
+
+  if (body.readingNotes !== undefined && body.readingNotes !== null && typeof body.readingNotes !== "string") {
+    errors.push("readingNotes must be a string or null");
+  }
+
   if (errors.length > 0) {
     return { valid: false, errors };
   }
@@ -140,6 +158,9 @@ function validateBookmarkUpdate(
       browser: body.browser as string | null | undefined,
       dateAdded: body.dateAdded as string | null | undefined,
       isFavorite: body.isFavorite as boolean | undefined,
+      isReadLater: body.isReadLater as boolean | undefined,
+      isRead: body.isRead as boolean | undefined,
+      readingNotes: body.readingNotes as string | null | undefined,
     },
   };
 }
@@ -257,6 +278,15 @@ export async function PUT(
     }
     if (data.isFavorite !== undefined) {
       updateData.isFavorite = data.isFavorite;
+    }
+    if (data.isReadLater !== undefined) {
+      updateData.isReadLater = data.isReadLater;
+    }
+    if (data.isRead !== undefined) {
+      updateData.isRead = data.isRead;
+    }
+    if (data.readingNotes !== undefined) {
+      updateData.readingNotes = data.readingNotes;
     }
 
     const result = await db
