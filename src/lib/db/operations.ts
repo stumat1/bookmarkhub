@@ -35,6 +35,67 @@ export interface UpdateBookmarkData {
   browser?: string | null;
 }
 
+// ============================================================================
+// URL Normalization (shared across import, stats, and duplicate detection)
+// ============================================================================
+
+/**
+ * Normalize a URL for duplicate comparison.
+ * Removes www prefix, normalizes protocol case, removes trailing slashes,
+ * sorts query params, and strips fragments.
+ */
+export function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    let normalized = parsed.protocol.toLowerCase() + "//";
+    let host = parsed.hostname.toLowerCase();
+    if (host.startsWith("www.")) {
+      host = host.slice(4);
+    }
+    normalized += host;
+    if (parsed.port && !((parsed.protocol === "http:" && parsed.port === "80") || (parsed.protocol === "https:" && parsed.port === "443"))) {
+      normalized += ":" + parsed.port;
+    }
+    let pathname = parsed.pathname;
+    if (pathname.length > 1 && pathname.endsWith("/")) {
+      pathname = pathname.slice(0, -1);
+    }
+    normalized += pathname;
+    if (parsed.search) {
+      const params = new URLSearchParams(parsed.search);
+      const sortedParams = new URLSearchParams([...params.entries()].sort());
+      const searchStr = sortedParams.toString();
+      if (searchStr) {
+        normalized += "?" + searchStr;
+      }
+    }
+    return normalized;
+  } catch {
+    return url.toLowerCase();
+  }
+}
+
+/**
+ * Create an aggressive similarity key for URL comparison.
+ * Strips protocol and www, keeping only host + path.
+ */
+export function getSimilarityKey(url: string): string {
+  try {
+    const parsed = new URL(url);
+    let host = parsed.hostname.toLowerCase();
+    if (host.startsWith("www.")) {
+      host = host.slice(4);
+    }
+    let pathname = parsed.pathname;
+    if (pathname.length > 1 && pathname.endsWith("/")) {
+      pathname = pathname.slice(0, -1);
+    }
+    return host + pathname;
+  } catch {
+    return url.toLowerCase();
+  }
+}
+
 export class DatabaseError extends Error {
   constructor(message: string, public readonly cause?: unknown) {
     super(message);
@@ -151,22 +212,29 @@ export async function findDuplicates(url: string): Promise<Bookmark[]> {
   }
 
   try {
-    const normalizedUrl = url.trim().toLowerCase();
+    // Use the same normalization as the duplicates endpoint so that
+    // import-time duplicate detection matches post-import detection.
+    const normalized = normalizeUrl(url);
 
-    // Check for exact match and common variations (with/without trailing slash)
-    const urlWithoutSlash = normalizedUrl.replace(/\/$/, "");
-    const urlWithSlash = `${urlWithoutSlash}/`;
+    // Extract the core hostname (without www/protocol) to use as a SQL filter.
+    // This narrows down candidates in SQL before doing full normalization in JS.
+    let hostname: string;
+    try {
+      const parsed = new URL(url);
+      hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    } catch {
+      hostname = url.toLowerCase();
+    }
 
-    return await db
+    // SQL pre-filter: find bookmarks whose URL contains the hostname (case-insensitive).
+    // This is much faster than loading all bookmarks when the DB is large.
+    const candidates = await db
       .select()
       .from(bookmarks)
-      .where(
-        or(
-          eq(sql`lower(${bookmarks.url})`, normalizedUrl),
-          eq(sql`lower(${bookmarks.url})`, urlWithoutSlash),
-          eq(sql`lower(${bookmarks.url})`, urlWithSlash)
-        )
-      );
+      .where(like(sql`lower(${bookmarks.url})`, `%${hostname}%`));
+
+    // JS post-filter: apply full normalization to match exactly
+    return candidates.filter((b) => normalizeUrl(b.url) === normalized);
   } catch (error) {
     throw new DatabaseError(
       `Failed to find duplicates: ${

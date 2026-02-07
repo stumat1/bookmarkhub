@@ -480,7 +480,7 @@ export default function Dashboard() {
                       {bookmark.title || "Untitled"}
                     </p>
                     <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                      {new URL(bookmark.url).hostname}
+                      {(() => { try { return new URL(bookmark.url).hostname; } catch { return bookmark.url; } })()}
                     </p>
                   </div>
                 </a>

@@ -20,13 +20,13 @@ interface CheckRequest {
 }
 
 // Check a single URL and return its status
-async function checkUrl(url: string): Promise<{ status: LinkStatus; statusCode?: number; redirectUrl?: string; error?: string }> {
+async function checkUrlWithMethod(url: string, method: "HEAD" | "GET"): Promise<{ status: LinkStatus; statusCode?: number; redirectUrl?: string; error?: string }> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
   try {
     const response = await fetch(url, {
-      method: "HEAD",
+      method,
       redirect: "manual",
       signal: controller.signal,
       headers: {
@@ -63,6 +63,19 @@ async function checkUrl(url: string): Promise<{ status: LinkStatus; statusCode?:
 
     return { status: "broken", error: "Unknown error occurred" };
   }
+}
+
+// Check a single URL - tries HEAD first, falls back to GET if HEAD is rejected
+async function checkUrl(url: string): Promise<{ status: LinkStatus; statusCode?: number; redirectUrl?: string; error?: string }> {
+  const headResult = await checkUrlWithMethod(url, "HEAD");
+
+  // If HEAD returned 405 Method Not Allowed or 403 Forbidden, retry with GET
+  // Many servers reject HEAD requests but respond fine to GET
+  if (headResult.statusCode === 405 || headResult.statusCode === 403) {
+    return checkUrlWithMethod(url, "GET");
+  }
+
+  return headResult;
 }
 
 // POST /api/link-check - Check links for specified bookmarks

@@ -41,12 +41,22 @@ export default function ExportPage() {
     try {
       setLoading(true);
       setError(null);
-      // Fetch all bookmarks for selection (no pagination limit)
-      const res = await fetch(`/api/bookmarks?limit=10000`);
-      if (!res.ok) throw new Error("Failed to fetch bookmarks");
-      const data = await res.json();
-      setBookmarks(data.data);
-      setTotalBookmarks(data.pagination.total);
+      // Fetch all bookmarks for selection by paginating through all pages
+      let allBookmarks: Bookmark[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
+
+      do {
+        const res = await fetch(`/api/bookmarks?limit=100&page=${currentPage}`);
+        if (!res.ok) throw new Error("Failed to fetch bookmarks");
+        const data = await res.json();
+        allBookmarks = [...allBookmarks, ...data.data];
+        totalPages = data.pagination.totalPages;
+        currentPage++;
+      } while (currentPage <= totalPages);
+
+      setBookmarks(allBookmarks);
+      setTotalBookmarks(allBookmarks.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load bookmarks");
     } finally {

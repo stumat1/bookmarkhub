@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
-import { eq, like, and, or, sql, desc, asc } from "drizzle-orm";
+import { eq, and, or, sql, desc, asc, type Column } from "drizzle-orm";
+
+// Escape SQL LIKE wildcards (% and _) in user input so they match literally
+function escapeLikePattern(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+// Build a LIKE condition with proper ESCAPE clause for SQLite
+function safeLike(column: Column, pattern: string) {
+  return sql`${column} LIKE ${pattern} ESCAPE '\\'`;
+}
+
+// Build a case-insensitive contains-match with escaped user input
+function safeContains(column: Column, value: string) {
+  return safeLike(column, `%${escapeLikePattern(value)}%`);
+}
 
 // Request/Response Types
 interface BookmarkCreateRequest {
@@ -10,6 +25,7 @@ interface BookmarkCreateRequest {
   description?: string;
   favicon?: string;
   folder?: string;
+  tags?: string;
   browser?: string;
   dateAdded?: string;
 }
@@ -95,6 +111,10 @@ function validateBookmarkInput(
     errors.push("folder must be a string");
   }
 
+  if (body.tags !== undefined && typeof body.tags !== "string") {
+    errors.push("tags must be a string");
+  }
+
   if (body.browser !== undefined && typeof body.browser !== "string") {
     errors.push("browser must be a string");
   }
@@ -119,6 +139,7 @@ function validateBookmarkInput(
       description: body.description as string | undefined,
       favicon: body.favicon as string | undefined,
       folder: body.folder as string | undefined,
+      tags: body.tags as string | undefined,
       browser: body.browser as string | undefined,
       dateAdded: body.dateAdded as string | undefined,
     },
@@ -231,32 +252,32 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
 
       // Handle field-specific searches from advanced syntax
       if (parsed.title) {
-        conditions.push(like(bookmarks.title, `%${parsed.title}%`));
+        conditions.push(safeContains(bookmarks.title, parsed.title));
       }
 
       if (parsed.url) {
-        conditions.push(like(bookmarks.url, `%${parsed.url}%`));
+        conditions.push(safeContains(bookmarks.url, parsed.url));
       }
 
       if (parsed.notes) {
-        conditions.push(like(bookmarks.description, `%${parsed.notes}%`));
+        conditions.push(safeContains(bookmarks.description, parsed.notes));
       }
 
       // Handle folder from advanced syntax (overrides dropdown filter)
       if (parsed.folder) {
-        conditions.push(like(bookmarks.folder, `%${parsed.folder}%`));
+        conditions.push(safeContains(bookmarks.folder, parsed.folder));
       }
 
       // Handle tag from advanced syntax (overrides dropdown filter)
       if (parsed.tag) {
-        const tagValue = parsed.tag;
+        const escaped = escapeLikePattern(parsed.tag);
         conditions.push(
           or(
-            eq(bookmarks.tags, tagValue),
-            like(bookmarks.tags, `${tagValue},%`),
-            like(bookmarks.tags, `%,${tagValue}`),
-            like(bookmarks.tags, `%,${tagValue},%`),
-            like(bookmarks.tags, `%${tagValue}%`) // Also match partial tags
+            eq(bookmarks.tags, parsed.tag),
+            safeLike(bookmarks.tags, `${escaped},%`),
+            safeLike(bookmarks.tags, `%,${escaped}`),
+            safeLike(bookmarks.tags, `%,${escaped},%`),
+            safeLike(bookmarks.tags, `%${escaped}%`) // Also match partial tags
           )
         );
       }
@@ -265,9 +286,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
       if (parsed.general.length > 0) {
         const generalConditions = parsed.general.map((term) =>
           or(
-            like(bookmarks.title, `%${term}%`),
-            like(bookmarks.url, `%${term}%`),
-            like(bookmarks.description, `%${term}%`)
+            safeContains(bookmarks.title, term),
+            safeContains(bookmarks.url, term),
+            safeContains(bookmarks.description, term)
           )
         );
         // All general terms must match (AND logic)
@@ -287,12 +308,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
     // Only apply dropdown tag filter if not overridden by advanced search
     if (tag && !search?.includes("tag:")) {
       // Match tag in comma-separated list (handles: "tag", "tag,other", "other,tag", "a,tag,b")
+      const escapedTag = escapeLikePattern(tag);
       conditions.push(
         or(
           eq(bookmarks.tags, tag),
-          like(bookmarks.tags, `${tag},%`),
-          like(bookmarks.tags, `%,${tag}`),
-          like(bookmarks.tags, `%,${tag},%`)
+          safeLike(bookmarks.tags, `${escapedTag},%`),
+          safeLike(bookmarks.tags, `%,${escapedTag}`),
+          safeLike(bookmarks.tags, `%,${escapedTag},%`)
         )
       );
     }
@@ -391,6 +413,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BookmarkR
         description: data.description ?? null,
         favicon: data.favicon ?? null,
         folder: data.folder ?? null,
+        tags: data.tags ?? null,
         browser: data.browser ?? null,
         dateAdded: data.dateAdded ? new Date(data.dateAdded) : null,
       })

@@ -58,7 +58,11 @@ function QuickAddForm() {
 
       if (foldersRes.ok) {
         const foldersData = await foldersRes.json();
-        setFolders(foldersData.folders || []);
+        setFolders(
+          foldersData.folders
+            ?.map((f: { folder: string | null }) => f.folder)
+            .filter(Boolean) || []
+        );
       }
 
       if (tagsRes.ok) {
@@ -112,15 +116,15 @@ function QuickAddForm() {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Failed to save bookmark");
       }
 
       // If tags were provided, update the bookmark with tags
       if (formData.tags.trim()) {
-        const bookmark = await res.json();
-        await fetch(`/api/bookmarks/${bookmark.id}`, {
+        await fetch(`/api/bookmarks/${data.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

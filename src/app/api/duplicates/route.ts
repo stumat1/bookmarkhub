@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, inArray } from "drizzle-orm";
+import { normalizeUrl, getSimilarityKey } from "@/src/lib/db/operations";
 
 // Types for duplicate detection
 interface BookmarkData {
@@ -47,63 +48,6 @@ interface ErrorResponse {
   error: string;
 }
 
-// Normalize URL for comparison
-function normalizeUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    // Normalize to lowercase
-    let normalized = parsed.protocol.toLowerCase() + "//";
-    // Remove www. prefix
-    let host = parsed.hostname.toLowerCase();
-    if (host.startsWith("www.")) {
-      host = host.slice(4);
-    }
-    normalized += host;
-    // Add port if non-standard
-    if (parsed.port && !((parsed.protocol === "http:" && parsed.port === "80") || (parsed.protocol === "https:" && parsed.port === "443"))) {
-      normalized += ":" + parsed.port;
-    }
-    // Normalize path (remove trailing slash for non-root paths)
-    let pathname = parsed.pathname;
-    if (pathname.length > 1 && pathname.endsWith("/")) {
-      pathname = pathname.slice(0, -1);
-    }
-    normalized += pathname;
-    // Include search params (sorted for consistency)
-    if (parsed.search) {
-      const params = new URLSearchParams(parsed.search);
-      const sortedParams = new URLSearchParams([...params.entries()].sort());
-      const searchStr = sortedParams.toString();
-      if (searchStr) {
-        normalized += "?" + searchStr;
-      }
-    }
-    // Exclude hash/fragment
-    return normalized;
-  } catch {
-    return url.toLowerCase();
-  }
-}
-
-// Create a URL similarity key (more aggressive normalization)
-function getSimilarityKey(url: string): string {
-  try {
-    const parsed = new URL(url);
-    // Aggressive normalization: ignore protocol, www, trailing slashes
-    let host = parsed.hostname.toLowerCase();
-    if (host.startsWith("www.")) {
-      host = host.slice(4);
-    }
-    let pathname = parsed.pathname;
-    if (pathname.length > 1 && pathname.endsWith("/")) {
-      pathname = pathname.slice(0, -1);
-    }
-    return host + pathname;
-  } catch {
-    return url.toLowerCase();
-  }
-}
-
 // Normalize title for comparison
 function normalizeTitle(title: string): string {
   return title
@@ -121,84 +65,114 @@ function normalizeTitle(title: string): string {
 // GET /api/duplicates - Find duplicate bookmarks
 export async function GET(): Promise<NextResponse<DuplicatesResponse | ErrorResponse>> {
   try {
-    // Fetch all bookmarks
-    const allBookmarks = await db.select().from(bookmarks);
+    // Phase 1: Fetch only lightweight fields to identify duplicate groups
+    const lightweight = await db
+      .select({ id: bookmarks.id, url: bookmarks.url, title: bookmarks.title })
+      .from(bookmarks);
 
-    const groups: DuplicateGroup[] = [];
-    const processedIds = new Set<number>();
-
-    // 1. Find exact URL matches
-    const urlMap = new Map<string, BookmarkData[]>();
-    for (const bookmark of allBookmarks) {
-      const normalizedUrl = normalizeUrl(bookmark.url);
-      if (!urlMap.has(normalizedUrl)) {
-        urlMap.set(normalizedUrl, []);
-      }
-      urlMap.get(normalizedUrl)!.push(bookmark);
+    // Build groups using only IDs (no full records in memory yet)
+    interface IdGroup {
+      type: "exact_url" | "similar_url" | "similar_title";
+      reason: string;
+      ids: number[];
     }
 
-    for (const [url, duplicates] of urlMap.entries()) {
-      if (duplicates.length > 1) {
-        // Sort by createdAt descending (newest first)
-        duplicates.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        groups.push({
-          type: "exact_url",
-          reason: `Exact URL match: ${url}`,
-          bookmarks: duplicates,
-        });
-        duplicates.forEach((b) => processedIds.add(b.id));
+    const idGroups: IdGroup[] = [];
+    const processedIds = new Set<number>();
+    const duplicateIds = new Set<number>();
+
+    // 1. Find exact URL matches
+    const urlMap = new Map<string, { id: number }[]>();
+    for (const bm of lightweight) {
+      const normalized = normalizeUrl(bm.url);
+      if (!urlMap.has(normalized)) {
+        urlMap.set(normalized, []);
+      }
+      urlMap.get(normalized)!.push({ id: bm.id });
+    }
+
+    for (const [url, entries] of urlMap.entries()) {
+      if (entries.length > 1) {
+        const ids = entries.map((e) => e.id);
+        idGroups.push({ type: "exact_url", reason: `Exact URL match: ${url}`, ids });
+        ids.forEach((id) => { processedIds.add(id); duplicateIds.add(id); });
       }
     }
 
     // 2. Find similar URLs (different protocols, www variations)
-    const similarUrlMap = new Map<string, BookmarkData[]>();
-    for (const bookmark of allBookmarks) {
-      if (processedIds.has(bookmark.id)) continue;
-      const similarityKey = getSimilarityKey(bookmark.url);
-      if (!similarUrlMap.has(similarityKey)) {
-        similarUrlMap.set(similarityKey, []);
+    const similarUrlMap = new Map<string, { id: number }[]>();
+    for (const bm of lightweight) {
+      if (processedIds.has(bm.id)) continue;
+      const key = getSimilarityKey(bm.url);
+      if (!similarUrlMap.has(key)) {
+        similarUrlMap.set(key, []);
       }
-      similarUrlMap.get(similarityKey)!.push(bookmark);
+      similarUrlMap.get(key)!.push({ id: bm.id });
     }
 
-    for (const [key, duplicates] of similarUrlMap.entries()) {
-      if (duplicates.length > 1) {
-        // Sort by createdAt descending (newest first)
-        duplicates.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        groups.push({
-          type: "similar_url",
-          reason: `Similar URLs (protocol/www variations): ${key}`,
-          bookmarks: duplicates,
-        });
-        duplicates.forEach((b) => processedIds.add(b.id));
+    for (const [key, entries] of similarUrlMap.entries()) {
+      if (entries.length > 1) {
+        const ids = entries.map((e) => e.id);
+        idGroups.push({ type: "similar_url", reason: `Similar URLs (protocol/www variations): ${key}`, ids });
+        ids.forEach((id) => { processedIds.add(id); duplicateIds.add(id); });
       }
     }
 
     // 3. Find similar titles with different URLs
-    const titleMap = new Map<string, BookmarkData[]>();
-    for (const bookmark of allBookmarks) {
-      if (processedIds.has(bookmark.id)) continue;
-      const normalizedTitle = normalizeTitle(bookmark.title);
-      if (normalizedTitle.length < 5) continue; // Skip very short titles
-      if (!titleMap.has(normalizedTitle)) {
-        titleMap.set(normalizedTitle, []);
+    const titleMap = new Map<string, { id: number }[]>();
+    for (const bm of lightweight) {
+      if (processedIds.has(bm.id)) continue;
+      const normalized = normalizeTitle(bm.title);
+      if (normalized.length < 5) continue;
+      if (!titleMap.has(normalized)) {
+        titleMap.set(normalized, []);
       }
-      titleMap.get(normalizedTitle)!.push(bookmark);
+      titleMap.get(normalized)!.push({ id: bm.id });
     }
 
-    for (const [title, duplicates] of titleMap.entries()) {
-      if (duplicates.length > 1) {
+    for (const [title, entries] of titleMap.entries()) {
+      if (entries.length > 1) {
+        const ids = entries.map((e) => e.id);
+        idGroups.push({ type: "similar_title", reason: `Similar titles: "${title}"`, ids });
+        ids.forEach((id) => duplicateIds.add(id));
+      }
+    }
+
+    // Phase 2: Fetch full records only for bookmarks that are in duplicate groups
+    const fullRecordsMap = new Map<number, BookmarkData>();
+
+    if (duplicateIds.size > 0) {
+      const allDupIds = Array.from(duplicateIds);
+      // Fetch in batches to avoid overly large IN clauses
+      const batchSize = 500;
+      for (let i = 0; i < allDupIds.length; i += batchSize) {
+        const batch = allDupIds.slice(i, i + batchSize);
+        const records = await db.select().from(bookmarks).where(inArray(bookmarks.id, batch));
+        for (const r of records) {
+          fullRecordsMap.set(r.id, r);
+        }
+      }
+    }
+
+    // Build final groups with full bookmark data
+    const groups: DuplicateGroup[] = [];
+
+    for (const idGroup of idGroups) {
+      const groupBookmarks = idGroup.ids
+        .map((id) => fullRecordsMap.get(id))
+        .filter((b): b is BookmarkData => b !== undefined);
+
+      if (groupBookmarks.length > 1) {
         // Sort by createdAt descending (newest first)
-        duplicates.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        groupBookmarks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         groups.push({
-          type: "similar_title",
-          reason: `Similar titles: "${title}"`,
-          bookmarks: duplicates,
+          type: idGroup.type,
+          reason: idGroup.reason,
+          bookmarks: groupBookmarks,
         });
       }
     }
 
-    // Calculate total duplicates (all bookmarks that are in groups minus one per group - the "original")
     const totalDuplicates = groups.reduce((sum, group) => sum + (group.bookmarks.length - 1), 0);
 
     return NextResponse.json({

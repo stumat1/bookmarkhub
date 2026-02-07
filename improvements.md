@@ -142,33 +142,33 @@ Proactive duplicate detection beyond import time.
 - [x] Merge duplicates (combine tags, keep newest)
 - [x] Dashboard duplicate count indicator
 
-### 11. Keyboard Shortcuts
+### 11. Keyboard Shortcuts DONE
 
 **Priority:** Medium | **Effort:** Low
 
 Power user navigation and actions.
 
-- [ ] `j` / `k` - Navigate up/down in list
-- [ ] `o` or `Enter` - Open selected bookmark
-- [ ] `e` - Edit selected bookmark
-- [ ] `d` - Delete selected bookmark (with confirmation)
-- [ ] `/` - Focus search input
-- [ ] `n` - New bookmark
-- [ ] `f` - Toggle favorite
-- [ ] `Escape` - Close modals, clear selection
-- [ ] `?` - Show keyboard shortcuts help
+- [x] `j` / `k` - Navigate up/down in list
+- [x] `o` or `Enter` - Open selected bookmark
+- [x] `e` - Edit selected bookmark
+- [x] `d` - Delete selected bookmark (with confirmation)
+- [x] `/` - Focus search input
+- [x] `n` - New bookmark
+- [x] `f` - Toggle favorite
+- [x] `Escape` - Close modals, clear selection
+- [x] `?` - Show keyboard shortcuts help
 
-### 12. Manual Bookmark Creation
+### 12. Manual Bookmark Creation DONE
 
 **Priority:** High | **Effort:** Low
 
 Add bookmarks directly without importing a file.
 
-- [ ] "Add Bookmark" button in header/bookmarks page
-- [ ] Form with URL, title, folder, tags, notes
-- [ ] Auto-fetch page title from URL
-- [ ] Auto-fetch favicon from URL
-- [ ] URL validation and duplicate warning
+- [x] "Add Bookmark" button in header/bookmarks page
+- [x] Form with URL, title, folder, tags, notes
+- [x] Auto-fetch page title from URL
+- [x] Auto-fetch favicon from URL
+- [x] URL validation and duplicate warning
 
 ---
 

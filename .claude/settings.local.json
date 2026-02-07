@@ -12,7 +12,13 @@
       "Bash(npm run db:migrate:*)",
       "Bash(npx tsx:*)",
       "Bash(node:*)",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "Bash(docker build:*)",
+      "Bash(npm view:*)",
+      "Bash(npm install:*)",
+      "Bash(docker push:*)",
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(dir \"C:\\\\projects\\\\bookmarkhub\\\\src\\\\app\\\\api\")"
     ]
   }
 }

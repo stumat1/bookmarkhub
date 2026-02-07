@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -45,7 +45,10 @@ import {
   BookCheck,
   Copy,
   Merge,
+  Keyboard,
+  Plus,
 } from "lucide-react";
+import AddBookmarkModal from "@/src/components/AddBookmarkModal";
 
 // Types
 type LinkStatus = "valid" | "broken" | "timeout" | "redirect" | "unchecked";
@@ -1370,6 +1373,77 @@ function DuplicatesModal({
   );
 }
 
+// Keyboard Shortcuts Help Modal
+function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
+  const shortcuts = [
+    { keys: ["j"], description: "Move down in bookmark list" },
+    { keys: ["k"], description: "Move up in bookmark list" },
+    { keys: ["o", "Enter"], description: "Open selected bookmark" },
+    { keys: ["e"], description: "Edit selected bookmark" },
+    { keys: ["d"], description: "Delete selected bookmark" },
+    { keys: ["f"], description: "Toggle favorite on selected bookmark" },
+    { keys: ["/"], description: "Focus search input" },
+    { keys: ["n"], description: "Create new bookmark" },
+    { keys: ["Esc"], description: "Close modal / clear selection" },
+    { keys: ["?"], description: "Show this help" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Keyboard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Keyboard Shortcuts
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {shortcuts.map((shortcut) => (
+            <div
+              key={shortcut.description}
+              className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+            >
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                {shortcut.description}
+              </span>
+              <div className="flex items-center gap-1">
+                {shortcut.keys.map((key, i) => (
+                  <span key={key} className="flex items-center gap-1">
+                    {i > 0 && (
+                      <span className="text-xs text-zinc-400">/</span>
+                    )}
+                    <kbd className="inline-flex min-w-[1.75rem] items-center justify-center rounded-md border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 font-mono text-xs font-medium text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                      {key}
+                    </kbd>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6">
+          <button
+            onClick={onClose}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BookmarksPageContent() {
   const searchParams = useSearchParams();
 
@@ -1450,6 +1524,15 @@ function BookmarksPageContent() {
 
   // Duplicates modal
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
+
+  // Add bookmark modal
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  // Keyboard shortcuts
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const bookmarkListRef = useRef<HTMLDivElement>(null);
 
   // Load search history on mount
   useEffect(() => {
@@ -1833,6 +1916,189 @@ function BookmarksPageContent() {
     fetchLinkHealth();
   }, [fetchLinkHealth]);
 
+  // Reset selected index when bookmarks change
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [bookmarks]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const isAnyModalOpen = () =>
+      !!editingBookmark ||
+      !!deletingBookmark ||
+      !!previewBookmark ||
+      showBulkDeleteModal ||
+      showBulkMoveModal ||
+      showBulkTagModal ||
+      showSearchHelp ||
+      showDuplicatesModal ||
+      showShortcutsHelp ||
+      showAddModal;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInputFocused =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable;
+
+      // Escape always works: close modals, clear selection, blur search
+      if (e.key === "Escape") {
+        if (showShortcutsHelp) {
+          setShowShortcutsHelp(false);
+          return;
+        }
+        if (editingBookmark) {
+          setEditingBookmark(null);
+          return;
+        }
+        if (deletingBookmark) {
+          setDeletingBookmark(null);
+          return;
+        }
+        if (previewBookmark) {
+          setPreviewBookmark(null);
+          return;
+        }
+        if (showBulkDeleteModal) {
+          setShowBulkDeleteModal(false);
+          return;
+        }
+        if (showBulkMoveModal) {
+          setShowBulkMoveModal(false);
+          return;
+        }
+        if (showBulkTagModal) {
+          setShowBulkTagModal(false);
+          return;
+        }
+        if (showSearchHelp) {
+          setShowSearchHelp(false);
+          return;
+        }
+        if (showDuplicatesModal) {
+          setShowDuplicatesModal(false);
+          return;
+        }
+        if (showAddModal) {
+          setShowAddModal(false);
+          return;
+        }
+        if (isInputFocused) {
+          (target as HTMLInputElement).blur();
+          return;
+        }
+        if (selectedIndex >= 0) {
+          setSelectedIndex(-1);
+          return;
+        }
+        return;
+      }
+
+      // Don't handle shortcuts if a modal is open or input is focused
+      if (isAnyModalOpen() || isInputFocused) return;
+
+      switch (e.key) {
+        case "j": {
+          // Move down
+          e.preventDefault();
+          setSelectedIndex((prev) =>
+            prev < bookmarks.length - 1 ? prev + 1 : prev
+          );
+          break;
+        }
+        case "k": {
+          // Move up
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+          break;
+        }
+        case "o":
+        case "Enter": {
+          // Open selected bookmark
+          if (selectedIndex >= 0 && selectedIndex < bookmarks.length) {
+            e.preventDefault();
+            const bookmark = bookmarks[selectedIndex];
+            window.open(bookmark.url, "_blank", "noopener,noreferrer");
+          }
+          break;
+        }
+        case "e": {
+          // Edit selected bookmark
+          if (selectedIndex >= 0 && selectedIndex < bookmarks.length) {
+            e.preventDefault();
+            setEditingBookmark(bookmarks[selectedIndex]);
+          }
+          break;
+        }
+        case "d": {
+          // Delete selected bookmark (with confirmation modal)
+          if (selectedIndex >= 0 && selectedIndex < bookmarks.length) {
+            e.preventDefault();
+            setDeletingBookmark(bookmarks[selectedIndex]);
+          }
+          break;
+        }
+        case "f": {
+          // Toggle favorite
+          if (selectedIndex >= 0 && selectedIndex < bookmarks.length) {
+            e.preventDefault();
+            toggleFavorite(bookmarks[selectedIndex]);
+          }
+          break;
+        }
+        case "/": {
+          // Focus search
+          e.preventDefault();
+          searchInputRef.current?.focus();
+          break;
+        }
+        case "n": {
+          // New bookmark - open add modal
+          e.preventDefault();
+          setShowAddModal(true);
+          break;
+        }
+        case "?": {
+          // Show shortcuts help
+          e.preventDefault();
+          setShowShortcutsHelp(true);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    bookmarks,
+    selectedIndex,
+    editingBookmark,
+    deletingBookmark,
+    previewBookmark,
+    showBulkDeleteModal,
+    showBulkMoveModal,
+    showBulkTagModal,
+    showSearchHelp,
+    showDuplicatesModal,
+    showShortcutsHelp,
+    showAddModal,
+    toggleFavorite,
+  ]);
+
+  // Scroll selected bookmark into view
+  useEffect(() => {
+    if (selectedIndex >= 0 && bookmarkListRef.current) {
+      // +1 to skip the "Select all" header row
+      const items = bookmarkListRef.current.children;
+      const targetItem = items[selectedIndex + 1] as HTMLElement | undefined;
+      if (targetItem) {
+        targetItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }
+  }, [selectedIndex]);
+
   // Handle search submit
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1899,6 +2165,21 @@ function BookmarksPageContent() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                Add Bookmark
+              </button>
+              <button
+                onClick={() => setShowShortcutsHelp(true)}
+                className="flex items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                title="Keyboard shortcuts (?)"
+              >
+                <Keyboard className="h-4 w-4" />
+                <kbd className="hidden sm:inline rounded border border-zinc-300 bg-zinc-100 px-1 py-0.5 font-mono text-xs dark:border-zinc-600 dark:bg-zinc-800">?</kbd>
+              </button>
               <button
                 onClick={() => setShowDuplicatesModal(true)}
                 className="flex items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -2020,6 +2301,7 @@ function BookmarksPageContent() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
@@ -2379,7 +2661,7 @@ function BookmarksPageContent() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <div ref={bookmarkListRef} className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {/* Select All Header */}
               <div className="flex items-center gap-4 border-b border-zinc-100 bg-zinc-50 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-800/50">
                 <button
@@ -2397,12 +2679,17 @@ function BookmarksPageContent() {
                 </button>
               </div>
 
-              {bookmarks.map((bookmark) => (
+              {bookmarks.map((bookmark, index) => (
                 <div
                   key={bookmark.id}
                   className={`flex items-center gap-4 p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
                     selectedIds.has(bookmark.id) ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
+                  } ${
+                    selectedIndex === index
+                      ? "ring-2 ring-inset ring-blue-500 bg-blue-50/30 dark:bg-blue-950/10"
+                      : ""
                   }`}
+                  onClick={() => setSelectedIndex(index)}
                 >
                   {/* Checkbox */}
                   <button
@@ -2699,6 +2986,21 @@ function BookmarksPageContent() {
           onClose={() => setShowDuplicatesModal(false)}
           onMergeComplete={fetchBookmarks}
         />
+      )}
+
+      {/* Add Bookmark Modal */}
+      <AddBookmarkModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={() => {
+          setShowAddModal(false);
+          fetchBookmarks();
+        }}
+      />
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcutsHelp && (
+        <KeyboardShortcutsModal onClose={() => setShowShortcutsHelp(false)} />
       )}
     </div>
   );
