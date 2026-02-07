@@ -19,6 +19,8 @@ import {
   Copy,
 } from "lucide-react";
 import BookmarkUploader from "@/src/components/BookmarkUploader";
+import { fetchWithRetry } from "@/src/lib/fetch-with-retry";
+import { parseApiError, friendlyErrorMessage } from "@/src/lib/api-error";
 
 // Types matching API response
 interface BrowserCount {
@@ -129,12 +131,16 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
       const [statsRes, linkHealthRes, favoritesRes] = await Promise.all([
-        fetch("/api/stats"),
-        fetch("/api/link-check"),
-        fetch("/api/bookmarks?favorite=true&limit=5"),
+        fetchWithRetry("/api/stats"),
+        fetchWithRetry("/api/link-check"),
+        fetchWithRetry("/api/bookmarks?favorite=true&limit=5"),
       ]);
 
-      if (!statsRes.ok) throw new Error("Failed to fetch stats");
+      const statsError = await parseApiError(statsRes);
+      if (statsError) {
+        setError(friendlyErrorMessage(statsError));
+        return;
+      }
       const statsData = await statsRes.json();
       setStats(statsData);
 

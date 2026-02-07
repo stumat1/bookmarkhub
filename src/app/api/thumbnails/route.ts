@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq, inArray, isNull } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 // Response types
 interface ThumbnailResponse {
@@ -44,7 +45,7 @@ export async function GET(): Promise<NextResponse<{ total: number; withThumbnail
       withoutThumbnails,
     });
   } catch (error) {
-    console.error("Error fetching thumbnail stats:", error);
+    logger.error("Error fetching thumbnail stats", { error: String(error) });
     return NextResponse.json(
       { total: 0, withThumbnails: 0, withoutThumbnails: 0 },
       { status: 500 }
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Thumbnail
       results,
     });
   } catch (error) {
-    console.error("Error generating thumbnails:", error);
+    logger.error("Error generating thumbnails", { error: String(error) });
 
     if (error instanceof SyntaxError) {
       return NextResponse.json(
@@ -178,7 +179,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<{ succe
 
     return NextResponse.json({ success: true, cleared });
   } catch (error) {
-    console.error("Error clearing thumbnails:", error);
+    logger.error("Error clearing thumbnails", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to clear thumbnails" },
       { status: 500 }

@@ -10,6 +10,7 @@ import {
   DatabaseError,
   type NewBookmark,
 } from "@/src/lib/db/operations";
+import { logger } from "@/src/lib/logger";
 
 // ============================================================================
 // Types
@@ -237,7 +238,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ImportRes
     }
 
     // Handle unexpected errors
-    console.error("Import error:", error);
+    logger.error("Import error", { error: String(error) });
     return NextResponse.json(
       {
         success: false,

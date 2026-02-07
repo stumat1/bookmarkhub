@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { inArray } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 // Request Types
 interface ExportRequest {
@@ -208,7 +209,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Blob | Er
       },
     });
   } catch (error) {
-    console.error("Error exporting bookmarks:", error);
+    logger.error("Error exporting bookmarks", { error: String(error) });
 
     if (error instanceof SyntaxError) {
       return NextResponse.json(

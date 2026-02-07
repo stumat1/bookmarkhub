@@ -20,3 +20,9 @@ sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("busy_timeout = 5000"); // 5 second timeout
 
 export const db = drizzle(sqlite, { schema });
+
+/** Cleanly close the database, checkpointing WAL first. */
+export function closeDatabase() {
+  sqlite.pragma("wal_checkpoint(TRUNCATE)");
+  sqlite.close();
+}

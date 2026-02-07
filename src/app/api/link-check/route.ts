@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 type LinkStatus = "valid" | "broken" | "timeout" | "redirect" | "unchecked";
 
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       summary,
     });
   } catch (error) {
-    console.error("Error checking links:", error);
+    logger.error("Error checking links", { error: String(error) });
 
     if (error instanceof SyntaxError) {
       return NextResponse.json(
@@ -200,7 +201,7 @@ export async function GET(): Promise<NextResponse> {
       healthPercentage,
     });
   } catch (error) {
-    console.error("Error fetching link health:", error);
+    logger.error("Error fetching link health", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to fetch link health statistics" },
       { status: 500 }

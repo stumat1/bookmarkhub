@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { isNotNull } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 interface TagCount {
   tag: string;
@@ -44,7 +45,7 @@ export async function GET(): Promise<NextResponse<TagsResponse>> {
 
     return NextResponse.json({ tags, total });
   } catch (error) {
-    console.error("Error fetching tags:", error);
+    logger.error("Error fetching tags", { error: String(error) });
     return NextResponse.json({ tags: [], total: 0 }, { status: 500 });
   }
 }

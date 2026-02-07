@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { sql, desc } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 // Response Types
 interface BrowserCount {
@@ -134,7 +135,7 @@ export async function GET(): Promise<
       },
     });
   } catch (error) {
-    console.error("Error fetching stats:", error);
+    logger.error("Error fetching stats", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to fetch statistics" },
       { status: 500 }

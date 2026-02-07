@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 // Request/Response Types
 interface BookmarkUpdateRequest {
@@ -197,7 +198,7 @@ export async function GET(
 
     return NextResponse.json(bookmark);
   } catch (error) {
-    console.error("Error fetching bookmark:", error);
+    logger.error("Error fetching bookmark", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to fetch bookmark" },
       { status: 500 }
@@ -305,7 +306,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error updating bookmark:", error);
+    logger.error("Error updating bookmark", { error: String(error) });
 
     if (error instanceof SyntaxError) {
       return NextResponse.json(
@@ -355,7 +356,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting bookmark:", error);
+    logger.error("Error deleting bookmark", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to delete bookmark" },
       { status: 500 }

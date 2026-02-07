@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq, and, or, sql, desc, asc, type Column } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 // Escape SQL LIKE wildcards (% and _) in user input so they match literally
 function escapeLikePattern(value: string): string {
@@ -382,7 +383,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
       },
     });
   } catch (error) {
-    console.error("Error fetching bookmarks:", error);
+    logger.error("Error fetching bookmarks", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to fetch bookmarks" },
       { status: 500 }
@@ -429,7 +430,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BookmarkR
 
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
-    console.error("Error creating bookmark:", error);
+    logger.error("Error creating bookmark", { error: String(error) });
 
     if (error instanceof SyntaxError) {
       return NextResponse.json(

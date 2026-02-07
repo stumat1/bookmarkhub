@@ -18,7 +18,13 @@
       "Bash(npm install:*)",
       "Bash(docker push:*)",
       "Bash(timeout 15 npm run dev:*)",
-      "Bash(dir \"C:\\\\projects\\\\bookmarkhub\\\\src\\\\app\\\\api\")"
+      "Bash(dir \"C:\\\\projects\\\\bookmarkhub\\\\src\\\\app\\\\api\")",
+      "WebFetch(domain:www.better-auth.com)",
+      "WebSearch",
+      "Bash(dir:*)",
+      "Bash(npx vitest run)",
+      "Bash(npx next build:*)",
+      "Bash(npm test:*)"
     ]
   }
 }

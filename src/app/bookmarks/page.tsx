@@ -49,6 +49,7 @@ import {
   Plus,
 } from "lucide-react";
 import AddBookmarkModal from "@/src/components/AddBookmarkModal";
+import { fetchWithRetry } from "@/src/lib/fetch-with-retry";
 
 // Types
 type LinkStatus = "valid" | "broken" | "timeout" | "redirect" | "unchecked";
@@ -1122,7 +1123,7 @@ function DuplicatesModal({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/duplicates");
+        const res = await fetchWithRetry("/api/duplicates");
         if (!res.ok) throw new Error("Failed to fetch duplicates");
         const data = await res.json();
         setDuplicates(data);
@@ -1172,7 +1173,7 @@ function DuplicatesModal({
       if (!res.ok) throw new Error("Failed to merge duplicates");
 
       // Refresh duplicates
-      const refreshRes = await fetch("/api/duplicates");
+      const refreshRes = await fetchWithRetry("/api/duplicates");
       if (refreshRes.ok) {
         const data = await refreshRes.json();
         setDuplicates(data);
@@ -1547,7 +1548,7 @@ function BookmarksPageContent() {
     const fetchFilterOptions = async () => {
       try {
         // Fetch browsers from stats
-        const statsRes = await fetch("/api/stats");
+        const statsRes = await fetchWithRetry("/api/stats");
         if (statsRes.ok) {
           const stats: StatsResponse = await statsRes.json();
           const browserList = stats.bookmarksByBrowser
@@ -1557,7 +1558,7 @@ function BookmarksPageContent() {
         }
 
         // Fetch all unique folders from dedicated endpoint
-        const foldersRes = await fetch("/api/folders");
+        const foldersRes = await fetchWithRetry("/api/folders");
         if (foldersRes.ok) {
           const data: { folders: { folder: string | null; count: number }[] } = await foldersRes.json();
           const folderList = data.folders
@@ -1568,7 +1569,7 @@ function BookmarksPageContent() {
         }
 
         // Fetch all unique tags
-        const tagsRes = await fetch("/api/tags");
+        const tagsRes = await fetchWithRetry("/api/tags");
         if (tagsRes.ok) {
           const data: { tags: { tag: string; count: number }[] } = await tagsRes.json();
           setTags(data.tags);
@@ -1584,7 +1585,7 @@ function BookmarksPageContent() {
   // Fetch link health statistics
   const fetchLinkHealth = useCallback(async () => {
     try {
-      const res = await fetch("/api/link-check");
+      const res = await fetchWithRetry("/api/link-check");
       if (res.ok) {
         const data = await res.json();
         setLinkHealth(data);
@@ -1615,7 +1616,7 @@ function BookmarksPageContent() {
       params.set("sort", sortBy);
       params.set("order", sortOrder);
 
-      const res = await fetch(`/api/bookmarks?${params}`);
+      const res = await fetchWithRetry(`/api/bookmarks?${params}`);
       if (!res.ok) throw new Error("Failed to fetch bookmarks");
 
       const data: PaginatedResponse = await res.json();
@@ -1672,7 +1673,7 @@ function BookmarksPageContent() {
 
     try {
       // Fetch all broken bookmarks
-      const res = await fetch("/api/bookmarks?linkStatus=broken&limit=1000");
+      const res = await fetchWithRetry("/api/bookmarks?linkStatus=broken&limit=1000");
       if (!res.ok) throw new Error("Failed to fetch broken bookmarks");
 
       const data: PaginatedResponse = await res.json();

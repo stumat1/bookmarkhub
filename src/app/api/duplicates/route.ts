@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { normalizeUrl, getSimilarityKey } from "@/src/lib/db/operations";
+import { logger } from "@/src/lib/logger";
 
 // Types for duplicate detection
 interface BookmarkData {
@@ -181,7 +182,7 @@ export async function GET(): Promise<NextResponse<DuplicatesResponse | ErrorResp
       totalGroups: groups.length,
     });
   } catch (error) {
-    console.error("Error finding duplicates:", error);
+    logger.error("Error finding duplicates", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to find duplicates" },
       { status: 500 }
@@ -257,7 +258,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<{ success
       message: `Merged ${deleteIds.length} duplicate(s) into bookmark #${keepId}`,
     });
   } catch (error) {
-    console.error("Error merging duplicates:", error);
+    logger.error("Error merging duplicates", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to merge duplicates" },
       { status: 500 }

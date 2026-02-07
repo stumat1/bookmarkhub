@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { sql } from "drizzle-orm";
+import { logger } from "@/src/lib/logger";
 
 interface FolderCount {
   folder: string | null;
@@ -33,7 +34,7 @@ export async function GET(): Promise<NextResponse<FoldersResponse>> {
       total,
     });
   } catch (error) {
-    console.error("Error fetching folders:", error);
+    logger.error("Error fetching folders", { error: String(error) });
     return NextResponse.json(
       { folders: [], total: 0 },
       { status: 500 }

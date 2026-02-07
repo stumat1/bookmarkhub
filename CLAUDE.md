@@ -11,6 +11,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run db:migrate` - Run migrations
 - `npm run db:push` - Push schema directly to database (dev)
 - `npm run db:studio` - Open Drizzle Studio GUI
+- `npm run db:seed` - Create initial admin user (requires running dev server)
+- `npm run db:backup` - Backup SQLite database (uses `.backup()` API)
+- `npm run db:vacuum` - Run VACUUM and ANALYZE on database
+- `npm test` - Run tests (Vitest)
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage
 
 ## Architecture
 
@@ -20,6 +26,8 @@ This is a Next.js 16 project using the App Router with the following stack:
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS v4
 - **Database**: Drizzle ORM with better-sqlite3
+- **Auth**: Better Auth (email+password, single-user, signup disabled)
+- **Testing**: Vitest
 - **UI Icons**: Lucide React
 
 ### Path Aliases
@@ -32,7 +40,20 @@ This is a Next.js 16 project using the App Router with the following stack:
 - Database connection in `db/index.ts`
 - Uses SQLite file `sqlite.db` in project root
 
+### Authentication
+
+- Server config: `src/lib/auth.ts` (Better Auth with Drizzle adapter)
+- Client hooks: `src/lib/auth-client.ts`
+- Auth API: `src/app/api/auth/[...all]/route.ts` (catch-all handler)
+- Login page: `src/app/login/page.tsx`
+- Middleware: `middleware.ts` (auth checks, security headers, rate limiting)
+- Auth tables in `db/schema.ts`: `user`, `session`, `account`, `verification`
+- Seed script: `scripts/seed-admin.mjs` (run with `npm run db:seed` while dev server is running)
+- Env vars: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (see `.env.example`)
+
 ### API Routes
+
+All API routes (except `/api/auth/*` and `/api/health`) require authentication.
 
 - `GET /api/bookmarks` - List bookmarks with pagination
 - `POST /api/bookmarks` - Create a bookmark
@@ -40,6 +61,7 @@ This is a Next.js 16 project using the App Router with the following stack:
 - `DELETE /api/bookmarks/[id]` - Delete a bookmark
 - `GET /api/export` - Redirects to `/export` page
 - `POST /api/export` - Export bookmarks to Netscape HTML format (accepts `{ ids: number[] | "all" }`)
+- `GET /api/health` - Health check with DB monitoring (public, no auth required)
 
 ### Components
 
@@ -48,5 +70,21 @@ Located in `src/components/`:
 - **EditBookmarkModal** - Modal for editing bookmarks with fields for title, URL, folder, tags, and notes. Includes form validation, loading states, and success/error notifications. Props: `bookmark`, `isOpen`, `onClose`, `onSave`
 - **BookmarkUploader** - Drag-and-drop file uploader for importing bookmark HTML files
 - **FolderTree** - Displays bookmark folder hierarchy
-- **Nav** - Navigation component
+- **Nav** - Navigation component with sign-out button
 - **ThemeToggle** - Dark/light mode toggle
+- **ErrorBoundary** - React error boundary with retry UI and dashboard link
+- **GlobalErrorHandler** - Client-side unhandled promise rejection logger
+
+### Error Handling Utilities
+
+- `src/lib/client-logger.ts` - Client-safe structured JSON logger (for `"use client"` components)
+- `src/lib/fetch-with-retry.ts` - Fetch wrapper with exponential backoff (retries GET/HEAD on 5xx/network errors)
+- `src/lib/api-error.ts` - Error classification (user vs system) and friendly messages
+
+### Instrumentation
+
+- `instrumentation.ts` - Next.js instrumentation hook: server-side unhandled rejection logging, graceful shutdown (SIGTERM/SIGINT with DB checkpoint)
+
+### CI/CD
+
+- `.github/workflows/ci.yml` - GitHub Actions: lint, test, build on push/PR
