@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/src/components/ThemeToggle";
 import { ErrorBoundary } from "@/src/components/ErrorBoundary";
 import { GlobalErrorHandler } from "@/src/components/GlobalErrorHandler";
 
-const siteUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+const siteUrl = process.env.SITE_URL || "http://localhost:3000";
 
 export const metadata: Metadata = {
   title: {

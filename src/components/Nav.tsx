@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Bookmark,
@@ -12,9 +12,7 @@ import {
   Menu,
   X,
   Zap,
-  LogOut,
 } from "lucide-react";
-import { authClient } from "@/src/lib/auth-client";
 
 const navLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -26,16 +24,7 @@ const navLinks = [
 
 export default function Nav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  async function handleSignOut() {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => router.push("/login"),
-      },
-    });
-  }
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -77,13 +66,6 @@ export default function Nav() {
                 </Link>
               );
             })}
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 transition-colors ml-2"
-            >
-              <LogOut className="w-4 h-4" aria-hidden="true" />
-              Sign Out
-            </button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -126,13 +108,6 @@ export default function Nav() {
                   </Link>
                 );
               })}
-              <button
-                onClick={() => { setMobileMenuOpen(false); handleSignOut(); }}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                <LogOut className="w-5 h-5" aria-hidden="true" />
-                Sign Out
-              </button>
             </div>
           </div>
         )}

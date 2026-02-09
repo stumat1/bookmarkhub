@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionCookie } from "better-auth/cookies";
 import { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX, RATE_LIMIT_CLEANUP_MS } from "@/src/lib/constants";
 
 // --- In-memory rate limiter ---
@@ -56,16 +55,8 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip auth check for login page, auth API routes, and health endpoint
-  const isPublicPath =
-    pathname === "/login" ||
-    pathname.startsWith("/api/auth/") ||
-    pathname === "/api/health" ||
-    pathname.startsWith("/_next/") ||
-    pathname === "/favicon.ico";
-
-  // Rate limit API routes (except auth, which Better Auth rate-limits itself)
-  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/")) {
+  // Rate limit API routes
+  if (pathname.startsWith("/api/")) {
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
@@ -79,21 +70,6 @@ export function middleware(request: NextRequest) {
       );
       response.headers.set("Retry-After", retryAfter.toString());
       return addSecurityHeaders(response);
-    }
-  }
-
-  // Auth check for protected routes
-  if (!isPublicPath) {
-    const sessionCookie = getSessionCookie(request);
-    if (!sessionCookie) {
-      // API routes return 401, pages redirect to login
-      if (pathname.startsWith("/api/")) {
-        return addSecurityHeaders(
-          NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        );
-      }
-      const loginUrl = new URL("/login", request.url);
-      return addSecurityHeaders(NextResponse.redirect(loginUrl));
     }
   }
 

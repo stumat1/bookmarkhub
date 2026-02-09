@@ -11,7 +11,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run db:migrate` - Run migrations
 - `npm run db:push` - Push schema directly to database (dev)
 - `npm run db:studio` - Open Drizzle Studio GUI
-- `npm run db:seed` - Create initial admin user (requires running dev server)
 - `npm run db:backup` - Backup SQLite database (uses `.backup()` API)
 - `npm run db:vacuum` - Run VACUUM and ANALYZE on database
 - `npm test` - Run tests (Vitest)
@@ -26,7 +25,6 @@ This is a Next.js 16 project using the App Router with the following stack:
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS v4
 - **Database**: Drizzle ORM with better-sqlite3
-- **Auth**: Better Auth (email+password, single-user, signup disabled)
 - **Testing**: Vitest
 - **UI Icons**: Lucide React
 
@@ -40,20 +38,11 @@ This is a Next.js 16 project using the App Router with the following stack:
 - Database connection in `db/index.ts`
 - Uses SQLite file `sqlite.db` in project root
 
-### Authentication
+### Middleware
 
-- Server config: `src/lib/auth.ts` (Better Auth with Drizzle adapter)
-- Client hooks: `src/lib/auth-client.ts`
-- Auth API: `src/app/api/auth/[...all]/route.ts` (catch-all handler)
-- Login page: `src/app/login/page.tsx`
-- Middleware: `middleware.ts` (auth checks, security headers, rate limiting)
-- Auth tables in `db/schema.ts`: `user`, `session`, `account`, `verification`
-- Seed script: `scripts/seed-admin.mjs` (run with `npm run db:seed` while dev server is running)
-- Env vars: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (see `.env.example`)
+- `middleware.ts` - Security headers, rate limiting for API routes
 
 ### API Routes
-
-All API routes (except `/api/auth/*` and `/api/health`) require authentication.
 
 - `GET /api/bookmarks` - List bookmarks with pagination
 - `POST /api/bookmarks` - Create a bookmark
@@ -70,7 +59,7 @@ Located in `src/components/`:
 - **EditBookmarkModal** - Modal for editing bookmarks with fields for title, URL, folder, tags, and notes. Includes form validation, loading states, and success/error notifications. Props: `bookmark`, `isOpen`, `onClose`, `onSave`
 - **BookmarkUploader** - Drag-and-drop file uploader for importing bookmark HTML files
 - **FolderTree** - Displays bookmark folder hierarchy
-- **Nav** - Navigation component with sign-out button
+- **Nav** - Navigation component
 - **ThemeToggle** - Dark/light mode toggle
 - **ErrorBoundary** - React error boundary with retry UI and dashboard link
 - **GlobalErrorHandler** - Client-side unhandled promise rejection logger
