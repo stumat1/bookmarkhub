@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
-          <div className="text-center">
+          <main id="main-content" className="text-center" role="alert">
             <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
               Something went wrong
             </h1>
@@ -56,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 Go to Dashboard
               </a>
             </div>
-          </div>
+          </main>
         </div>
       );
     }

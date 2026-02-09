@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "@/src/lib/logger";
+import { isValidUrl } from "@/src/lib/url";
 
 // Request/Response Types
 interface BookmarkUpdateRequest {
@@ -47,16 +48,6 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-// Validation helpers
-function validateUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function validateId(id: string): number | null {
   const parsed = parseInt(id, 10);
   if (isNaN(parsed) || parsed <= 0) {
@@ -86,7 +77,7 @@ function validateBookmarkUpdate(
   if (body.url !== undefined) {
     if (typeof body.url !== "string") {
       errors.push("url must be a string");
-    } else if (!validateUrl(body.url)) {
+    } else if (!isValidUrl(body.url)) {
       errors.push("url must be a valid URL");
     }
   }

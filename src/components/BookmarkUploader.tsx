@@ -197,15 +197,20 @@ export default function BookmarkUploader() {
         accept=".html,.htm"
         onChange={handleInputChange}
         className="hidden"
+        aria-label="Select bookmark file to import"
       />
 
       {/* Idle / Selected state - Show drop zone */}
       {(uploadState === "idle" || uploadState === "selected") && (
         <div
+          role="button"
+          tabIndex={0}
+          aria-label={uploadState === "selected" && file ? `Selected file: ${file.name}. Click to choose a different file` : "Drop bookmark file here or click to browse"}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={openFilePicker}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); } }}
           className={`
             relative cursor-pointer rounded-xl border-2 border-dashed p-8
             transition-all duration-200 ease-in-out
@@ -270,16 +275,17 @@ export default function BookmarkUploader() {
           </button>
           <button
             onClick={handleReset}
+            aria-label="Remove selected file"
             className="rounded-lg border border-zinc-300 px-4 py-3 text-zinc-700 transition-colors hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:focus:ring-offset-zinc-900"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       )}
 
       {/* Uploading state */}
       {uploadState === "uploading" && (
-        <div className="rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
+        <div role="status" aria-live="polite" className="rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex flex-col items-center gap-4 text-center">
             <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
             <div>
@@ -384,7 +390,7 @@ export default function BookmarkUploader() {
 
       {/* Error state */}
       {uploadState === "error" && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/30">
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/30">
           <div className="flex items-start gap-4">
             <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/50">
               <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />

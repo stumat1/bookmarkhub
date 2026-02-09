@@ -3,6 +3,15 @@ import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq, and, or, sql, desc, asc, type Column } from "drizzle-orm";
 import { logger } from "@/src/lib/logger";
+import { isValidUrl } from "@/src/lib/url";
+import {
+  BOOKMARKS_API_DEFAULT_LIMIT,
+  BOOKMARKS_API_MAX_LIMIT,
+  DEFAULT_SORT_FIELD,
+  DEFAULT_SORT_ORDER,
+  VALID_SORT_FIELDS,
+  LINK_STATUSES,
+} from "@/src/lib/constants";
 
 // Escape SQL LIKE wildcards (% and _) in user input so they match literally
 function escapeLikePattern(value: string): string {
@@ -67,16 +76,6 @@ interface ErrorResponse {
   details?: string[];
 }
 
-// Validation helpers
-function validateUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function validateBookmarkInput(
   data: unknown
 ): { valid: true; data: BookmarkCreateRequest } | { valid: false; errors: string[] } {
@@ -90,7 +89,7 @@ function validateBookmarkInput(
 
   if (!body.url || typeof body.url !== "string") {
     errors.push("url is required and must be a string");
-  } else if (!validateUrl(body.url)) {
+  } else if (!isValidUrl(body.url)) {
     errors.push("url must be a valid URL");
   }
 
@@ -219,7 +218,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
 
     // Pagination params
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
+    const limit = Math.min(BOOKMARKS_API_MAX_LIMIT, Math.max(1, parseInt(searchParams.get("limit") || String(BOOKMARKS_API_DEFAULT_LIMIT), 10)));
     const offset = (page - 1) * limit;
 
     // Filter params
@@ -233,15 +232,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
     const read = searchParams.get("read")?.trim();
 
     // Sort params
-    const sortField = searchParams.get("sort")?.trim() || "createdAt";
-    const sortOrder = searchParams.get("order")?.trim() || "desc";
+    const sortField = searchParams.get("sort")?.trim() || DEFAULT_SORT_FIELD;
+    const sortOrder = searchParams.get("order")?.trim() || DEFAULT_SORT_ORDER;
 
     // Validate sort field
-    const validSortFields = ["createdAt", "title", "url", "dateAdded", "updatedAt"] as const;
-    type SortField = typeof validSortFields[number];
-    const safeSortField: SortField = validSortFields.includes(sortField as SortField)
+    type SortField = typeof VALID_SORT_FIELDS[number];
+    const safeSortField: SortField = (VALID_SORT_FIELDS as readonly string[]).includes(sortField)
       ? (sortField as SortField)
-      : "createdAt";
+      : DEFAULT_SORT_FIELD as SortField;
     const safeSortOrder = sortOrder === "asc" ? "asc" : "desc";
 
     // Build where conditions
@@ -321,8 +319,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
     }
 
     if (linkStatus) {
-      const validStatuses = ["valid", "broken", "timeout", "redirect", "unchecked"] as const;
-      type LinkStatusType = typeof validStatuses[number];
+      type LinkStatusType = typeof LINK_STATUSES[number];
 
       if (linkStatus === "unchecked") {
         // Include both explicit "unchecked" and null values
@@ -332,7 +329,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<PaginatedR
             sql`${bookmarks.linkStatus} IS NULL`
           )
         );
-      } else if (validStatuses.includes(linkStatus as LinkStatusType)) {
+      } else if ((LINK_STATUSES as readonly string[]).includes(linkStatus)) {
         conditions.push(eq(bookmarks.linkStatus, linkStatus as LinkStatusType));
       }
     }

@@ -33,10 +33,10 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
-      <div className="w-full max-w-sm">
+      <main id="main-content" className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600">
-            <Bookmark className="h-6 w-6 text-white" />
+            <Bookmark className="h-6 w-6 text-white" aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             BookmarkHub
@@ -51,7 +51,7 @@ export default function LoginPage() {
           className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
           {error && (
-            <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+            <div role="alert" className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
               {error}
             </div>
           )}
@@ -100,7 +100,7 @@ export default function LoginPage() {
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                 Signing in...
               </>
             ) : (
@@ -108,7 +108,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-      </div>
+      </main>
     </div>
   );
 }

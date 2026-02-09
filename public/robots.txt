@@ -1,0 +1,10 @@
+# BookmarkHub - Private bookmark manager
+# This is a single-user authenticated app; no public content to index.
+
+User-agent: *
+Disallow: /
+
+# Allow access to login page only
+Allow: /login
+
+Sitemap: /sitemap.xml

@@ -46,11 +46,11 @@ export default function Nav() {
 
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-      <nav className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav aria-label="Main navigation" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo / App Name */}
           <Link href="/" className="flex items-center gap-2">
-            <Bookmark className="w-6 h-6 text-blue-600" />
+            <Bookmark className="w-6 h-6 text-blue-600" aria-hidden="true" />
             <span className="font-bold text-lg text-zinc-900 dark:text-zinc-100">
               Bookmark Sync Hub
             </span>
@@ -65,13 +65,14 @@ export default function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  aria-current={active ? "page" : undefined}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     active
                       ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                       : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4" aria-hidden="true" />
                   {link.label}
                 </Link>
               );
@@ -80,7 +81,7 @@ export default function Nav() {
               onClick={handleSignOut}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 transition-colors ml-2"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
               Sign Out
             </button>
           </div>
@@ -89,19 +90,21 @@ export default function Nav() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800"
-            aria-label="Toggle menu"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav"
           >
             {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6" aria-hidden="true" />
             ) : (
-              <Menu className="w-6 h-6" />
+              <Menu className="w-6 h-6" aria-hidden="true" />
             )}
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-zinc-200 dark:border-zinc-800">
+          <div id="mobile-nav" className="md:hidden py-4 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
@@ -111,13 +114,14 @@ export default function Nav() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
+                    aria-current={active ? "page" : undefined}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                       active
                         ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                         : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800"
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-5 h-5" aria-hidden="true" />
                     {link.label}
                   </Link>
                 );
@@ -126,7 +130,7 @@ export default function Nav() {
                 onClick={() => { setMobileMenuOpen(false); handleSignOut(); }}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-5 h-5" aria-hidden="true" />
                 Sign Out
               </button>
             </div>

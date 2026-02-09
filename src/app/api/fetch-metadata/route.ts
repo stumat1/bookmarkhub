@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isValidUrl } from "@/src/lib/url";
+import { getFaviconUrl } from "@/src/lib/url";
+import { FETCH_METADATA_TIMEOUT_MS, METADATA_MAX_BYTES, USER_AGENT_METADATA } from "@/src/lib/constants";
 
 interface MetadataResponse {
   title: string | null;
@@ -7,15 +10,6 @@ interface MetadataResponse {
 
 interface ErrorResponse {
   error: string;
-}
-
-function validateUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // Extract <title> from HTML string
@@ -47,7 +41,7 @@ export async function GET(
     );
   }
 
-  if (!validateUrl(url)) {
+  if (!isValidUrl(url)) {
     return NextResponse.json(
       { error: "Invalid URL" },
       { status: 400 }
@@ -57,21 +51,16 @@ export async function GET(
   let title: string | null = null;
   let favicon: string | null = null;
 
-  try {
-    const hostname = new URL(url).hostname;
-    favicon = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-  } catch {
-    // Invalid URL for favicon - leave null
-  }
+  favicon = getFaviconUrl(url);
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), FETCH_METADATA_TIMEOUT_MS);
 
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "BookmarkHub/1.0",
+        "User-Agent": USER_AGENT_METADATA,
         Accept: "text/html",
       },
       redirect: "follow",
@@ -80,15 +69,13 @@ export async function GET(
     clearTimeout(timeout);
 
     if (response.ok) {
-      // Only read first 50KB to find the title
       const reader = response.body?.getReader();
       if (reader) {
         let html = "";
         const decoder = new TextDecoder();
         let bytesRead = 0;
-        const maxBytes = 50 * 1024;
 
-        while (bytesRead < maxBytes) {
+        while (bytesRead < METADATA_MAX_BYTES) {
           const { done, value } = await reader.read();
           if (done) break;
           html += decoder.decode(value, { stream: true });

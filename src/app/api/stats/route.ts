@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { sql, desc } from "drizzle-orm";
 import { logger } from "@/src/lib/logger";
+import { RECENT_IMPORTS_LIMIT } from "@/src/lib/constants";
 
 // Response Types
 interface BrowserCount {
@@ -67,7 +68,6 @@ export async function GET(): Promise<
       count: row.count,
     }));
 
-    // Get recent imports (last 10 bookmarks by createdAt)
     const recentResults = await db
       .select({
         id: bookmarks.id,
@@ -78,7 +78,7 @@ export async function GET(): Promise<
       })
       .from(bookmarks)
       .orderBy(desc(bookmarks.createdAt))
-      .limit(10);
+      .limit(RECENT_IMPORTS_LIMIT);
 
     const recentImports: RecentImport[] = recentResults.map((row) => ({
       id: row.id,

@@ -16,17 +16,11 @@ interface ErrorResponse {
   error: string;
 }
 
-// Generate a thumbnail URL using Microlink's screenshot API
-// This is a free service that doesn't require an API key
+import { MICROLINK_API_BASE, SCREENSHOT_VIEWPORT } from "@/src/lib/constants";
+
 function generateThumbnailUrl(pageUrl: string): string {
   const encodedUrl = encodeURIComponent(pageUrl);
-  // Using Microlink's screenshot feature with optimized settings for thumbnails
-  // - screenshot: true - enables screenshot capture
-  // - meta: false - skip metadata extraction for faster response
-  // - embed: screenshot.url - return only the screenshot URL
-  // - viewport.width/height - capture a standard desktop viewport
-  // - screenshot.type: jpeg - smaller file size
-  return `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=1280&viewport.height=800&screenshot.type=jpeg`;
+  return `${MICROLINK_API_BASE}?url=${encodedUrl}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${SCREENSHOT_VIEWPORT.width}&viewport.height=${SCREENSHOT_VIEWPORT.height}&screenshot.type=jpeg`;
 }
 
 

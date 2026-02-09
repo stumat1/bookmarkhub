@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { isValidUrl } from "@/src/lib/url";
+import { MODAL_FOCUS_DELAY_MS, NOTIFICATION_DURATION_MS, MODAL_CLOSE_DELAY_MS } from "@/src/lib/constants";
 
 // Types
 export interface Bookmark {
@@ -37,16 +39,6 @@ type NotificationState = {
   type: "success" | "error";
   message: string;
 } | null;
-
-// URL validation helper
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 // Validate API response matches Bookmark structure
 function isValidBookmarkResponse(data: unknown): data is Bookmark {
@@ -106,7 +98,7 @@ export default function EditBookmarkModal({
   // Focus title input when modal opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => titleInputRef.current?.focus(), 100);
+      setTimeout(() => titleInputRef.current?.focus(), MODAL_FOCUS_DELAY_MS);
     }
   }, [isOpen]);
 
@@ -152,7 +144,7 @@ export default function EditBookmarkModal({
   // Clear notification after delay
   useEffect(() => {
     if (notification) {
-      const timer = setTimeout(() => setNotification(null), 4000);
+      const timer = setTimeout(() => setNotification(null), NOTIFICATION_DURATION_MS);
       return () => clearTimeout(timer);
     }
   }, [notification]);
@@ -201,8 +193,7 @@ export default function EditBookmarkModal({
       // Call onSave callback with validated bookmark
       onSave(data);
 
-      // Close modal after brief delay to show success
-      setTimeout(() => onClose(), 1000);
+      setTimeout(() => onClose(), MODAL_CLOSE_DELAY_MS);
     } catch (error) {
       setNotification({
         type: "error",
@@ -252,13 +243,14 @@ export default function EditBookmarkModal({
             className="p-1 rounded-lg text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Notification */}
         {notification && (
           <div
+            role="alert"
             className={`mx-6 mt-4 p-3 rounded-lg flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 ${
               notification.type === "success"
                 ? "bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-200"
@@ -266,9 +258,9 @@ export default function EditBookmarkModal({
             }`}
           >
             {notification.type === "success" ? (
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             ) : (
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             )}
             <span className="text-sm">{notification.message}</span>
           </div>
@@ -438,7 +430,7 @@ export default function EditBookmarkModal({
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 Saving...
               </>
             ) : (

@@ -138,6 +138,8 @@ function FolderTreeItem({
               e.stopPropagation();
               toggleExpanded(node.path);
             }}
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${node.name} folder`}
             className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
           >
             <ChevronRight
@@ -271,8 +273,9 @@ export default function FolderTree({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-4">
-        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
+      <div role="status" className="flex items-center justify-center p-4">
+        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" aria-hidden="true" />
+        <span className="sr-only">Loading folders</span>
       </div>
     );
   }
@@ -292,7 +295,7 @@ export default function FolderTree({
   }
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav aria-label="Folder navigation" className="flex flex-col gap-1">
       {/* All Bookmarks */}
       <button
         onClick={() => onSelectFolder(null)}

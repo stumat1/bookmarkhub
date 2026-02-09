@@ -1,3 +1,5 @@
+import { DEFAULT_MAX_RETRIES, DEFAULT_BASE_DELAY_MS, RETRY_STATUS_THRESHOLD } from "./constants";
+
 interface RetryOptions {
   /** Maximum number of retries (default: 3) */
   maxRetries?: number;
@@ -23,7 +25,7 @@ export async function fetchWithRetry(
   init?: RequestInit,
   options?: RetryOptions
 ): Promise<Response> {
-  const { maxRetries = 3, baseDelayMs = 1000, retryMutations = false } = options ?? {};
+  const { maxRetries = DEFAULT_MAX_RETRIES, baseDelayMs = DEFAULT_BASE_DELAY_MS, retryMutations = false } = options ?? {};
 
   const method = (init?.method ?? "GET").toUpperCase();
   const canRetry = retryMutations || method === "GET" || method === "HEAD";
@@ -37,7 +39,7 @@ export async function fetchWithRetry(
       const response = await fetch(input, init);
 
       // Don't retry 4xx - those are user/client errors
-      if (response.status < 500) return response;
+      if (response.status < RETRY_STATUS_THRESHOLD) return response;
 
       // 5xx - retry if we have attempts left
       lastResponse = response;

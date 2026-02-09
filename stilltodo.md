@@ -64,12 +64,12 @@
 - [ ] Add centralized config for timeouts, limits, and other settings
 
 ### SEO & Accessibility
-- [ ] Add Open Graph and Twitter Card meta tags
-- [ ] Add `robots.txt` and XML sitemap
-- [ ] Improve ARIA labels on all interactive elements
-- [ ] Add visible focus indicators for keyboard navigation
-- [ ] Add alt text to image placeholders
-- [ ] Implement skip-navigation links
+- [x] Add Open Graph and Twitter Card meta tags
+- [x] Add `robots.txt` and XML sitemap
+- [x] Improve ARIA labels on all interactive elements
+- [x] Add visible focus indicators for keyboard navigation
+- [x] Add alt text to image placeholders
+- [x] Implement skip-navigation links
 
 ### Performance
 - [ ] Add HTTP caching headers (ETag, Cache-Control) to API responses

@@ -11,6 +11,7 @@ import {
   Copy,
   ExternalLink,
 } from "lucide-react";
+import { BOOKMARKLET_POPUP, COPY_FEEDBACK_DELAY_MS } from "@/src/lib/constants";
 
 export default function BookmarkletPage() {
   const [copied, setCopied] = useState(false);
@@ -20,14 +21,14 @@ export default function BookmarkletPage() {
 
   // Generate the bookmarklet code
   const bookmarkletCode = baseUrl
-    ? `javascript:(function(){var url=encodeURIComponent(window.location.href);var title=encodeURIComponent(document.title);var w=600,h=500;var left=(screen.width-w)/2;var top=(screen.height-h)/2;window.open('${baseUrl}/quick-add?url='+url+'&title='+title,'BookmarkHub','width='+w+',height='+h+',left='+left+',top='+top+',toolbar=no,menubar=no,scrollbars=yes,resizable=yes');})();`
+    ? `javascript:(function(){var url=encodeURIComponent(window.location.href);var title=encodeURIComponent(document.title);var w=${BOOKMARKLET_POPUP.width},h=${BOOKMARKLET_POPUP.height};var left=(screen.width-w)/2;var top=(screen.height-h)/2;window.open('${baseUrl}/quick-add?url='+url+'&title='+title,'BookmarkHub','width='+w+',height='+h+',left='+left+',top='+top+',toolbar=no,menubar=no,scrollbars=yes,resizable=yes');})();`
     : "";
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(bookmarkletCode);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), COPY_FEEDBACK_DELAY_MS);
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
@@ -37,7 +38,7 @@ export default function BookmarkletPage() {
       document.execCommand("copy");
       document.body.removeChild(textArea);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), COPY_FEEDBACK_DELAY_MS);
     }
   };
 
@@ -47,7 +48,7 @@ export default function BookmarkletPage() {
   };
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-8">
+    <main id="main-content" className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -81,13 +82,13 @@ export default function BookmarkletPage() {
               onClick={(e) => e.preventDefault()}
               className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all cursor-grab active:cursor-grabbing select-none"
             >
-              <GripVertical className="w-4 h-4 opacity-70" />
-              <Bookmark className="w-5 h-5" />
+              <GripVertical className="w-4 h-4 opacity-70" aria-hidden="true" />
+              <Bookmark className="w-5 h-5" aria-hidden="true" />
               <span>Add to BookmarkHub</span>
             </a>
 
             <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-              <Info className="w-4 h-4 flex-shrink-0" />
+              <Info className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
               <span>Drag this button to your bookmarks bar</span>
             </div>
           </div>
@@ -103,6 +104,7 @@ export default function BookmarkletPage() {
               </code>
               <button
                 onClick={handleCopy}
+                aria-label={copied ? "Copied to clipboard" : "Copy bookmarklet code"}
                 className="flex items-center gap-1.5 px-3 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors flex-shrink-0"
               >
                 {copied ? (

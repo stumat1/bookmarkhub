@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookmarks } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { logger } from "@/src/lib/logger";
+import { LINK_CHECK_TIMEOUT_MS, LINK_CHECK_BATCH_SIZE, USER_AGENT_LINK_CHECKER } from "@/src/lib/constants";
 
 type LinkStatus = "valid" | "broken" | "timeout" | "redirect" | "unchecked";
 
@@ -23,7 +24,7 @@ interface CheckRequest {
 // Check a single URL and return its status
 async function checkUrlWithMethod(url: string, method: "HEAD" | "GET"): Promise<{ status: LinkStatus; statusCode?: number; redirectUrl?: string; error?: string }> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), LINK_CHECK_TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {
@@ -31,7 +32,7 @@ async function checkUrlWithMethod(url: string, method: "HEAD" | "GET"): Promise<
       redirect: "manual",
       signal: controller.signal,
       headers: {
-        "User-Agent": "BookmarkHub Link Checker/1.0",
+        "User-Agent": USER_AGENT_LINK_CHECKER,
       },
     });
 
@@ -57,7 +58,7 @@ async function checkUrlWithMethod(url: string, method: "HEAD" | "GET"): Promise<
 
     if (error instanceof Error) {
       if (error.name === "AbortError") {
-        return { status: "timeout", error: "Request timed out after 10 seconds" };
+        return { status: "timeout", error: `Request timed out after ${LINK_CHECK_TIMEOUT_MS / 1000} seconds` };
       }
       return { status: "broken", error: error.message };
     }
@@ -83,7 +84,7 @@ async function checkUrl(url: string): Promise<{ status: LinkStatus; statusCode?:
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body: CheckRequest = await request.json();
-    const { ids, batchSize = 10 } = body;
+    const { ids, batchSize = LINK_CHECK_BATCH_SIZE } = body;
 
     if (!ids || (Array.isArray(ids) && ids.length === 0)) {
       return NextResponse.json(

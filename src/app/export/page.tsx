@@ -15,6 +15,7 @@ import {
   FileDown,
   BookOpen,
 } from "lucide-react";
+import { EXPORT_PAGE_SIZE } from "@/src/lib/constants";
 
 interface Bookmark {
   id: number;
@@ -47,7 +48,7 @@ export default function ExportPage() {
       let totalPages = 1;
 
       do {
-        const res = await fetch(`/api/bookmarks?limit=100&page=${currentPage}`);
+        const res = await fetch(`/api/bookmarks?limit=${EXPORT_PAGE_SIZE}&page=${currentPage}`);
         if (!res.ok) throw new Error("Failed to fetch bookmarks");
         const data = await res.json();
         allBookmarks = [...allBookmarks, ...data.data];
@@ -149,7 +150,7 @@ export default function ExportPage() {
     exportMode === "all" ? totalBookmarks : selectedIds.size;
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-8">
+    <main id="main-content" className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -176,6 +177,7 @@ export default function ExportPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => setExportMode("all")}
+              aria-pressed={exportMode === "all"}
               className={`flex-1 p-4 rounded-lg border-2 transition-colors text-left ${
                 exportMode === "all"
                   ? "border-blue-600 bg-blue-50 dark:bg-blue-950"
@@ -209,6 +211,7 @@ export default function ExportPage() {
 
             <button
               onClick={() => setExportMode("selected")}
+              aria-pressed={exportMode === "selected"}
               className={`flex-1 p-4 rounded-lg border-2 transition-colors text-left ${
                 exportMode === "selected"
                   ? "border-blue-600 bg-blue-50 dark:bg-blue-950"
@@ -268,10 +271,11 @@ export default function ExportPage() {
 
             {/* Search */}
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" aria-hidden="true" />
               <input
                 type="text"
                 placeholder="Search bookmarks..."
+                aria-label="Search bookmarks for export"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-10 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -279,17 +283,19 @@ export default function ExportPage() {
               {search && (
                 <button
                   onClick={() => setSearch("")}
+                  aria-label="Clear search"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
             </div>
 
             {/* Bookmark List */}
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <div role="status" className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-hidden="true" />
+                <span className="sr-only">Loading bookmarks</span>
               </div>
             ) : (
               <div className="max-h-80 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg">
@@ -363,15 +369,15 @@ export default function ExportPage() {
 
           {/* Progress/Status Messages */}
           {error && (
-            <div className="mt-4 flex items-center gap-2 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+            <div role="alert" className="mt-4 flex items-center gap-2 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" aria-hidden="true" />
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="mt-4 flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+            <div role="status" className="mt-4 flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium text-green-700 dark:text-green-300">
                   Export successful!
@@ -387,7 +393,7 @@ export default function ExportPage() {
         {/* Import Instructions */}
         <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6">
           <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+            <BookOpen className="w-5 h-5 text-zinc-600 dark:text-zinc-400" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               How to Import to Your Browser
             </h2>

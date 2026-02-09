@@ -21,6 +21,7 @@ import {
 import BookmarkUploader from "@/src/components/BookmarkUploader";
 import { fetchWithRetry } from "@/src/lib/fetch-with-retry";
 import { parseApiError, friendlyErrorMessage } from "@/src/lib/api-error";
+import { getHostname } from "@/src/lib/url";
 
 // Types matching API response
 interface BrowserCount {
@@ -186,18 +187,19 @@ export default function Dashboard() {
             <button
               onClick={fetchStats}
               disabled={loading}
+              aria-label="Refresh dashboard statistics"
               className="flex items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
               Refresh
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Statistics Section */}
-        <section className="mb-8">
+        <section aria-label="Overview statistics" className="mb-8">
           <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             Overview
           </h2>
@@ -366,7 +368,7 @@ export default function Dashboard() {
         {/* Main Content Grid */}
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Upload Section */}
-          <section>
+          <section aria-label="Import bookmarks">
             <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               Import Bookmarks
             </h2>
@@ -376,7 +378,7 @@ export default function Dashboard() {
           </section>
 
           {/* Quick Actions */}
-          <section>
+          <section aria-label="Quick actions">
             <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               Quick Actions
             </h2>
@@ -396,7 +398,7 @@ export default function Dashboard() {
                     Browse, search, and manage your saved bookmarks
                   </p>
                 </div>
-                <ExternalLink className="h-5 w-5 text-zinc-400" />
+                <ExternalLink className="h-5 w-5 text-zinc-400" aria-hidden="true" />
               </Link>
 
               <Link
@@ -414,7 +416,7 @@ export default function Dashboard() {
                     View bookmarks you saved for later reading
                   </p>
                 </div>
-                <ExternalLink className="h-5 w-5 text-zinc-400" />
+                <ExternalLink className="h-5 w-5 text-zinc-400" aria-hidden="true" />
               </Link>
 
               <a
@@ -432,7 +434,7 @@ export default function Dashboard() {
                     Download your bookmarks as an HTML file
                   </p>
                 </div>
-                <Download className="h-5 w-5 text-zinc-400" />
+                <Download className="h-5 w-5 text-zinc-400" aria-hidden="true" />
               </a>
             </div>
           </section>
@@ -440,7 +442,7 @@ export default function Dashboard() {
 
         {/* Quick Favorites */}
         {favorites.length > 0 && (
-          <section className="mt-8">
+          <section aria-label="Quick favorites" className="mt-8">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 Quick Favorites
@@ -486,7 +488,7 @@ export default function Dashboard() {
                       {bookmark.title || "Untitled"}
                     </p>
                     <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                      {(() => { try { return new URL(bookmark.url).hostname; } catch { return bookmark.url; } })()}
+                      {getHostname(bookmark.url) ?? bookmark.url}
                     </p>
                   </div>
                 </a>
@@ -496,7 +498,7 @@ export default function Dashboard() {
         )}
 
         {/* Recent Activity */}
-        <section className="mt-8">
+        <section aria-label="Recent activity" className="mt-8">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               Recent Activity
@@ -509,8 +511,9 @@ export default function Dashboard() {
 
           <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             {loading && !stats ? (
-              <div className="flex items-center justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+              <div role="status" className="flex items-center justify-center p-12">
+                <Loader2 className="h-8 w-8 animate-spin text-zinc-400" aria-hidden="true" />
+                <span className="sr-only">Loading recent activity</span>
               </div>
             ) : stats?.recentImports.length === 0 ? (
               <div className="p-12 text-center">
@@ -550,9 +553,10 @@ export default function Dashboard() {
                         href={bookmark.url}
                         target="_blank"
                         rel="noopener noreferrer"
+                        aria-label={`Open ${bookmark.title || "bookmark"} in new tab`}
                         className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-4 w-4" aria-hidden="true" />
                       </a>
                     </div>
                   </div>

@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX, RATE_LIMIT_CLEANUP_MS } from "@/src/lib/constants";
 
 // --- In-memory rate limiter ---
-const RATE_LIMIT_WINDOW_MS = 60_000; // 60 seconds
-const RATE_LIMIT_MAX = 100; // max requests per window
-
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
-// Cleanup stale entries every 5 minutes
 let lastCleanup = Date.now();
 function cleanupStaleEntries() {
   const now = Date.now();
-  if (now - lastCleanup < 300_000) return;
+  if (now - lastCleanup < RATE_LIMIT_CLEANUP_MS) return;
   lastCleanup = now;
   for (const [key, value] of requestCounts) {
     if (now > value.resetAt) {

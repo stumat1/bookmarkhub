@@ -9,6 +9,8 @@ import {
   Globe,
   Bookmark,
 } from "lucide-react";
+import { isValidUrl } from "@/src/lib/url";
+import { MODAL_FOCUS_DELAY_MS, NOTIFICATION_DURATION_MS, MODAL_CLOSE_DELAY_MS, DUPLICATE_CHECK_LIMIT } from "@/src/lib/constants";
 
 // Re-use the Bookmark type from EditBookmarkModal
 import type { Bookmark as BookmarkType } from "./EditBookmarkModal";
@@ -33,15 +35,6 @@ interface DuplicateMatch {
   id: number;
   title: string;
   url: string;
-}
-
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export default function AddBookmarkModal({
@@ -91,7 +84,7 @@ export default function AddBookmarkModal({
       setNotification(null);
       setFetchingMetadata(false);
       setCheckingDuplicates(false);
-      setTimeout(() => urlInputRef.current?.focus(), 100);
+      setTimeout(() => urlInputRef.current?.focus(), MODAL_FOCUS_DELAY_MS);
     }
   }, [isOpen]);
 
@@ -178,7 +171,7 @@ export default function AddBookmarkModal({
     setCheckingDuplicates(true);
     try {
       const res = await fetch(
-        `/api/bookmarks?search=${encodeURIComponent(trimmedUrl)}&limit=5`
+        `/api/bookmarks?search=${encodeURIComponent(trimmedUrl)}&limit=${DUPLICATE_CHECK_LIMIT}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -218,7 +211,7 @@ export default function AddBookmarkModal({
   // Clear notification after delay
   useEffect(() => {
     if (notification) {
-      const timer = setTimeout(() => setNotification(null), 4000);
+      const timer = setTimeout(() => setNotification(null), NOTIFICATION_DURATION_MS);
       return () => clearTimeout(timer);
     }
   }, [notification]);
@@ -258,7 +251,7 @@ export default function AddBookmarkModal({
 
       onSave(data);
 
-      setTimeout(() => onClose(), 1000);
+      setTimeout(() => onClose(), MODAL_CLOSE_DELAY_MS);
     } catch (error) {
       setNotification({
         type: "error",
@@ -307,13 +300,14 @@ export default function AddBookmarkModal({
             className="p-1 rounded-lg text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Notification */}
         {notification && (
           <div
+            role="alert"
             className={`mx-6 mt-4 p-3 rounded-lg flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 ${
               notification.type === "success"
                 ? "bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-200"
@@ -321,9 +315,9 @@ export default function AddBookmarkModal({
             }`}
           >
             {notification.type === "success" ? (
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             ) : (
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             )}
             <span className="text-sm">{notification.message}</span>
           </div>
@@ -331,8 +325,8 @@ export default function AddBookmarkModal({
 
         {/* Duplicate Warning */}
         {duplicateMatch && (
-          <div className="mx-6 mt-4 p-3 rounded-lg flex items-center gap-2 bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200 animate-in slide-in-from-top-2 duration-200">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <div role="alert" className="mx-6 mt-4 p-3 rounded-lg flex items-center gap-2 bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200 animate-in slide-in-from-top-2 duration-200">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             <span className="text-sm">
               A bookmark with this URL already exists: &quot;{duplicateMatch.title}&quot;
             </span>
@@ -526,7 +520,7 @@ export default function AddBookmarkModal({
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 Creating...
               </>
             ) : (
