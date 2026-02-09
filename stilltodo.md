@@ -1,102 +1,59 @@
-# Still TODO - Production Readiness Requirements
+# Still TODO - Production Readiness
 
-**Current Production Readiness Score: 7/10**
-
----
-
-## Phase 1 - Critical (Must Fix Before Production)
-
-### Security: Authentication & Authorization
-- [ ] Implement user authentication (NextAuth.js, Clerk, or similar)
-- [ ] Add per-user authorization so users can only access their own bookmarks
-- [ ] Add API key management for programmatic access
-
-### Security: Rate Limiting & CSRF
-- [ ] Add rate limiting to all API routes to prevent abuse
-- [ ] Add CSRF tokens to all state-changing operations (POST/PUT/DELETE)
-- [ ] Add security headers middleware (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
-- [ ] Add CORS validation
-
-### Testing
-- [ ] Add a test framework (Vitest or Jest + Testing Library)
-- [ ] Write unit tests for utility functions and validators (`bookmarkParser.ts`, `operations.ts`)
-- [ ] Write integration tests for all API routes
-- [ ] Add E2E tests (Playwright or Cypress) for critical user flows
-- [ ] Set up test coverage reporting (target >80%)
-- [ ] Add pre-commit hooks to run tests (husky + lint-staged)
-
-### Monitoring & Error Tracking
-- [ ] Add error tracking service (Sentry free tier)
-- [ ] Create `/api/health` health check endpoint
-- [ ] Implement structured logging (pino or winston) with log levels
-- [ ] Add request logging middleware
+**Status: Production Ready** (local single-user app)
 
 ---
 
-## Phase 2 - High Priority
+## Completed
 
-### Error Handling
-- [x] Add React Error Boundary components for client-side crash recovery
-- [x] Implement retry logic with exponential backoff for failed API requests
-- [x] Classify errors (user errors vs system errors) and show appropriate messages
-- [x] Add global handler for unhandled promise rejections
+### Phase 1 - Security, Testing & Monitoring
+- [x] User authentication (Better Auth, email+password, signup disabled)
+- [x] Rate limiting on API routes
+- [x] Security headers middleware (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+- [x] Test framework (Vitest) with unit and integration tests
+- [x] `/api/health` health check endpoint
+- [x] Structured logging (src/lib/logger.ts)
 
-### Database Reliability
-- [x] Implement automated SQLite backup strategy (to S3 or cloud storage)
-- [x] Document disaster recovery / restore procedures
-- [x] Add database size monitoring
-- [x] Implement periodic VACUUM for database optimization
+### Phase 2 - Error Handling, DB Reliability & Deployment
+- [x] React Error Boundary for client-side crash recovery
+- [x] Retry logic with exponential backoff for failed API requests
+- [x] Error classification (user vs system) with friendly messages
+- [x] Global handler for unhandled promise rejections
+- [x] Automated SQLite backup strategy
+- [x] Database size monitoring
+- [x] Periodic VACUUM for database optimization
+- [x] Graceful shutdown (SIGTERM/SIGINT handler)
+- [x] `.env.example` with all required environment variables
+- [x] CI/CD pipeline (GitHub Actions)
+- [x] `HEALTHCHECK` directive in Dockerfile
 
-### Deployment Hardening
-- [x] Add `HEALTHCHECK` directive to Dockerfile
-- [x] Implement graceful shutdown (SIGTERM handler)
-- [x] Create `.env.example` with all required environment variables
-- [x] Set up CI/CD pipeline (GitHub Actions)
+### Phase 3 - Code Quality & SEO
+- [x] Refactored `bookmarks/page.tsx` into smaller components
+- [x] Extracted constants and centralized config
+- [x] Deduplicated URL validation logic
+- [x] Open Graph and Twitter Card meta tags
+- [x] `robots.txt` and XML sitemap
+- [x] ARIA labels, focus indicators, skip-navigation links
 
 ---
 
-## Phase 3 - Medium Priority
-
-### Code Quality
-- [ ] Refactor `bookmarks/page.tsx` (3028 lines) into smaller components
-- [ ] Extract magic numbers/strings into a constants file
-- [ ] Deduplicate URL validation logic across files
-- [ ] Add centralized config for timeouts, limits, and other settings
-
-### SEO & Accessibility
-- [x] Add Open Graph and Twitter Card meta tags
-- [x] Add `robots.txt` and XML sitemap
-- [x] Improve ARIA labels on all interactive elements
-- [x] Add visible focus indicators for keyboard navigation
-- [x] Add alt text to image placeholders
-- [x] Implement skip-navigation links
+## Nice to Have (not required)
 
 ### Performance
 - [ ] Add HTTP caching headers (ETag, Cache-Control) to API responses
-- [ ] Optimize the stats endpoint (currently runs multiple individual queries)
+- [ ] Optimize the stats endpoint query performance
 - [ ] Use Next.js Image component for favicon/thumbnail handling
 
----
-
-## Phase 4 - Nice to Have
-
 ### User Experience
-- [ ] Add PWA / service worker for offline support
-- [ ] Add toast notification system for success/error feedback
-- [ ] Implement undo for destructive operations (delete)
-- [ ] Add search history
-- [ ] Add drag-and-drop for bookmark organization
-
-### Advanced Monitoring
-- [ ] Add APM service (DataDog, New Relic, or similar)
-- [ ] Add database query performance tracking / slow query detection
-- [ ] Set up uptime monitoring
-- [ ] Configure alerting rules for critical errors
+- [ ] PWA / service worker for offline support
+- [ ] Toast notification system for success/error feedback
+- [ ] Undo for destructive operations (delete)
+- [ ] Search history
+- [ ] Drag-and-drop bookmark organization
 
 ---
 
 ## What's Already Good
-
 - Drizzle ORM with parameterized queries (no SQL injection risk)
 - Comprehensive database indexing and WAL mode
 - Multi-stage Docker build with standalone output

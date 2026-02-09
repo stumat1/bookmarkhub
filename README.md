@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BookmarkHub
 
-## Getting Started
+A self-hosted bookmark manager for organizing, searching, and managing browser bookmarks. Import bookmarks from any browser, organize them into folders with tags, and access them from a clean web interface.
 
-First, run the development server:
+Built with Next.js, SQLite, and Better Auth. Designed to run locally as a single-user application.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- **Import/Export** - Import bookmarks from any browser via HTML file (drag-and-drop). Export back to standard Netscape HTML format.
+- **Organization** - Folder hierarchy, tags, and notes on any bookmark.
+- **Search** - Full-text search with advanced query syntax across titles, URLs, tags, and notes.
+- **Reading List** - Save bookmarks to read later.
+- **Keyboard Shortcuts** - Navigate and manage bookmarks without touching the mouse.
+- **Dark/Light Mode** - Theme toggle with system preference detection.
+- **Authentication** - Password-protected with signup disabled by default (single-user).
+- **Database Backups** - Built-in SQLite backup and optimization scripts.
+
+## Requirements
+
+- Node.js 20+
+- npm
+
+## Quick Start
+
+1. Clone the repository:
+
+```
+git clone https://github.com/your-username/bookmarkhub.git
+cd bookmarkhub
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Set up environment variables:
 
-## Learn More
+```
+cp .env.example .env
+```
 
-To learn more about Next.js, take a look at the following resources:
+Edit `.env` and set a random string for `BETTER_AUTH_SECRET`. Update `ADMIN_EMAIL` and `ADMIN_PASSWORD` with your desired login credentials.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Push the database schema:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+npm run db:push
+```
 
-## Deploy on Vercel
+5. Start the development server:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+6. Seed the admin user (while the dev server is running):
+
+```
+npm run db:seed
+```
+
+7. Open http://localhost:3000 and log in with your admin credentials.
+
+## Docker
+
+Build and run with Docker:
+
+```
+docker build -t bookmarkhub .
+docker run -d \
+  -p 3000:3000 \
+  -v bookmarkhub-data:/app/data \
+  -e BETTER_AUTH_SECRET=your-secret-here \
+  -e BETTER_AUTH_URL=http://localhost:3000 \
+  -e ADMIN_EMAIL=admin@example.com \
+  -e ADMIN_PASSWORD=changeme \
+  bookmarkhub
+```
+
+The SQLite database is stored in `/app/data` inside the container. Mount a volume to persist data across restarts.
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `BETTER_AUTH_SECRET` | Yes | - | Random secret string (32+ characters) |
+| `BETTER_AUTH_URL` | Yes | - | Base URL of the application |
+| `ADMIN_EMAIL` | Yes | - | Admin login email (used by seed script) |
+| `ADMIN_PASSWORD` | Yes | - | Admin login password (used by seed script) |
+| `SQLITE_DB_PATH` | No | `./sqlite.db` | Path to SQLite database file |
+| `BACKUP_DIR` | No | `./backups` | Directory for database backups |
+| `BACKUP_RETAIN` | No | `7` | Number of backup files to keep |
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run tests |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run tests with coverage report |
+| `npm run db:push` | Push schema to database (development) |
+| `npm run db:generate` | Generate migrations from schema changes |
+| `npm run db:migrate` | Run database migrations |
+| `npm run db:studio` | Open Drizzle Studio database GUI |
+| `npm run db:seed` | Create admin user (requires running server) |
+| `npm run db:backup` | Back up the SQLite database |
+| `npm run db:vacuum` | Run VACUUM and ANALYZE on the database |
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript (strict mode)
+- **Database**: SQLite via Drizzle ORM + better-sqlite3
+- **Auth**: Better Auth (email + password)
+- **Styling**: Tailwind CSS v4
+- **Testing**: Vitest
+- **Icons**: Lucide React
+
+## License
+
+MIT

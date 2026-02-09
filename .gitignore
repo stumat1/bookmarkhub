@@ -44,6 +44,11 @@ next-env.d.ts
 sqlite.db
 sqlite.db-shm
 sqlite.db-wal
+sqlite.db-journal
+/backups
+
+# claude code
+.claude/settings.local.json
 
 # Windows reserved device names
 nul
