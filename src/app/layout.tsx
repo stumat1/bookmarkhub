@@ -5,15 +5,13 @@ import { ThemeToggle } from "@/src/components/ThemeToggle";
 import { ErrorBoundary } from "@/src/components/ErrorBoundary";
 import { GlobalErrorHandler } from "@/src/components/GlobalErrorHandler";
 
-const siteUrl = process.env.SITE_URL || "http://localhost:3000";
-
 export const metadata: Metadata = {
   title: {
     default: "BookmarkHub",
     template: "%s | BookmarkHub",
   },
   description: "Centralized bookmark management across all your browsers. Import, organize, search, and export bookmarks with ease.",
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL("http://localhost:3000"),
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -23,23 +21,6 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
-  openGraph: {
-    type: "website",
-    siteName: "BookmarkHub",
-    title: "BookmarkHub",
-    description: "Centralized bookmark management across all your browsers. Import, organize, search, and export bookmarks with ease.",
-    url: siteUrl,
-    locale: "en_US",
-  },
-  twitter: {
-    card: "summary",
-    title: "BookmarkHub",
-    description: "Centralized bookmark management across all your browsers. Import, organize, search, and export bookmarks with ease.",
-  },
-  robots: {
-    index: false,
-    follow: false,
-  },
 };
 
 export const viewport: Viewport = {

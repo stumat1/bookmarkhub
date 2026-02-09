@@ -9,11 +9,6 @@ export const BOOKMARKS_API_MAX_LIMIT = 100;
 export const MAX_VISIBLE_PAGES = 5;
 export const EXPORT_PAGE_SIZE = 100;
 
-// -- Rate Limiting ------------------------------------------------------------
-export const RATE_LIMIT_WINDOW_MS = 60_000;
-export const RATE_LIMIT_MAX = 100;
-export const RATE_LIMIT_CLEANUP_MS = 300_000;
-
 // -- Timeouts & Delays --------------------------------------------------------
 export const FETCH_METADATA_TIMEOUT_MS = 5000;
 export const LINK_CHECK_TIMEOUT_MS = 10_000;

@@ -38,9 +38,7 @@ export async function parseApiError(
  * Returns a user-friendly message based on error type.
  */
 export function friendlyErrorMessage(error: ApiError): string {
-  if (error.status === 401) return "Please log in to continue.";
   if (error.status === 404) return "The requested item was not found.";
-  if (error.status === 429) return "Too many requests. Please wait and try again.";
   if (error.isUserError) return error.message;
   return "Something went wrong on our end. Please try again later.";
 }

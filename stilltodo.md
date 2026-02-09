@@ -7,8 +7,8 @@
 ## Completed
 
 ### Phase 1 - Security, Testing & Monitoring
-- [x] User authentication (Better Auth, email+password, signup disabled)
-- [x] Rate limiting on API routes
+- [x] ~~User authentication~~ (removed - single-user local app, no auth needed)
+- [x] ~~Rate limiting on API routes~~ (removed - single-user local app)
 - [x] Security headers middleware (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
 - [x] Test framework (Vitest) with unit and integration tests
 - [x] `/api/health` health check endpoint

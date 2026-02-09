@@ -2,7 +2,7 @@
 
 A self-hosted bookmark manager for organizing, searching, and managing browser bookmarks. Import bookmarks from any browser, organize them into folders with tags, and access them from a clean web interface.
 
-Built with Next.js, SQLite, and Better Auth. Designed to run locally as a single-user application.
+Built with Next.js, SQLite, and Drizzle ORM. Designed to run locally as a single-user application.
 
 ## Features
 
@@ -12,7 +12,6 @@ Built with Next.js, SQLite, and Better Auth. Designed to run locally as a single
 - **Reading List** - Save bookmarks to read later.
 - **Keyboard Shortcuts** - Navigate and manage bookmarks without touching the mouse.
 - **Dark/Light Mode** - Theme toggle with system preference detection.
-- **Authentication** - Password-protected with signup disabled by default (single-user).
 - **Database Backups** - Built-in SQLite backup and optimization scripts.
 
 ## Requirements
@@ -41,8 +40,6 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` and set a random string for `BETTER_AUTH_SECRET`. Update `ADMIN_EMAIL` and `ADMIN_PASSWORD` with your desired login credentials.
-
 4. Push the database schema:
 
 ```
@@ -55,13 +52,7 @@ npm run db:push
 npm run dev
 ```
 
-6. Seed the admin user (while the dev server is running):
-
-```
-npm run db:seed
-```
-
-7. Open http://localhost:3000 and log in with your admin credentials.
+6. Open http://localhost:3000.
 
 ## Docker
 
@@ -72,10 +63,6 @@ docker build -t bookmarkhub .
 docker run -d \
   -p 3000:3000 \
   -v bookmarkhub-data:/app/data \
-  -e BETTER_AUTH_SECRET=your-secret-here \
-  -e BETTER_AUTH_URL=http://localhost:3000 \
-  -e ADMIN_EMAIL=admin@example.com \
-  -e ADMIN_PASSWORD=changeme \
   bookmarkhub
 ```
 
@@ -85,10 +72,6 @@ The SQLite database is stored in `/app/data` inside the container. Mount a volum
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `BETTER_AUTH_SECRET` | Yes | - | Random secret string (32+ characters) |
-| `BETTER_AUTH_URL` | Yes | - | Base URL of the application |
-| `ADMIN_EMAIL` | Yes | - | Admin login email (used by seed script) |
-| `ADMIN_PASSWORD` | Yes | - | Admin login password (used by seed script) |
 | `SQLITE_DB_PATH` | No | `./sqlite.db` | Path to SQLite database file |
 | `BACKUP_DIR` | No | `./backups` | Directory for database backups |
 | `BACKUP_RETAIN` | No | `7` | Number of backup files to keep |
@@ -108,7 +91,6 @@ The SQLite database is stored in `/app/data` inside the container. Mount a volum
 | `npm run db:generate` | Generate migrations from schema changes |
 | `npm run db:migrate` | Run database migrations |
 | `npm run db:studio` | Open Drizzle Studio database GUI |
-| `npm run db:seed` | Create admin user (requires running server) |
 | `npm run db:backup` | Back up the SQLite database |
 | `npm run db:vacuum` | Run VACUUM and ANALYZE on the database |
 
@@ -117,7 +99,6 @@ The SQLite database is stored in `/app/data` inside the container. Mount a volum
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript (strict mode)
 - **Database**: SQLite via Drizzle ORM + better-sqlite3
-- **Auth**: Better Auth (email + password)
 - **Styling**: Tailwind CSS v4
 - **Testing**: Vitest
 - **Icons**: Lucide React

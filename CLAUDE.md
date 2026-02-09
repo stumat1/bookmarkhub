@@ -40,7 +40,7 @@ This is a Next.js 16 project using the App Router with the following stack:
 
 ### Middleware
 
-- `middleware.ts` - Security headers, rate limiting for API routes
+- `middleware.ts` - Security headers
 
 ### API Routes
 
@@ -50,7 +50,7 @@ This is a Next.js 16 project using the App Router with the following stack:
 - `DELETE /api/bookmarks/[id]` - Delete a bookmark
 - `GET /api/export` - Redirects to `/export` page
 - `POST /api/export` - Export bookmarks to Netscape HTML format (accepts `{ ids: number[] | "all" }`)
-- `GET /api/health` - Health check with DB monitoring (public, no auth required)
+- `GET /api/health` - Health check with DB monitoring
 
 ### Components
 
