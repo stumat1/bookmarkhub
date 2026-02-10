@@ -4,6 +4,10 @@ A self-hosted bookmark manager for organizing, searching, and managing browser b
 
 Built with Next.js, SQLite, and Drizzle ORM. Designed to run locally as a single-user application.
 
+## Preview Screenshot
+
+<img width="932" height="563" alt="bookmarkhub-screenshot-1" src="https://github.com/user-attachments/assets/8f93240e-707c-49fe-a2f2-44943de58a89" />
+
 ## Features
 
 - **Import/Export** - Import bookmarks from any browser via HTML file (drag-and-drop). Export back to standard Netscape HTML format.
