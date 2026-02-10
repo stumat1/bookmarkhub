@@ -8,6 +8,8 @@ Built with Next.js, SQLite, and Drizzle ORM. Designed to run locally as a single
 
 <img width="932" height="563" alt="bookmarkhub-screenshot-1" src="https://github.com/user-attachments/assets/8f93240e-707c-49fe-a2f2-44943de58a89" />
 
+<img width="947" height="563" alt="bookmarkhub-screenshot-2" src="https://github.com/user-attachments/assets/ee94cc92-46d8-42ad-936b-1892219675a0" />
+
 ## Features
 
 - **Import/Export** - Import bookmarks from any browser via HTML file (drag-and-drop). Export back to standard Netscape HTML format.
