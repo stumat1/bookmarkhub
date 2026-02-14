@@ -48,6 +48,7 @@ sqlite.db-journal
 /backups
 
 # claude code
+CLAUDE.md
 .claude/settings.local.json
 
 # Windows reserved device names
